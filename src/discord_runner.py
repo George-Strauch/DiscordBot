@@ -18,8 +18,7 @@ from functions.news import News
 
 
 def get_creds():
-    # f_name = "data/creds.json"
-    f_name = "/home/george/Documents/creds.json"
+    f_name = "data/creds.json"
     if not os.path.exists(f_name):
         raise Exception(f"please add a file with private tokens for discord and OpenAI [{f_name}]")
     with open(f_name, 'r') as fp:
