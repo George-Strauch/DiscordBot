@@ -174,6 +174,13 @@ async def get_news(ctx, *, args=None):
     await ctx.send(news_data[:2000])
 
 
+# ------------------------ APPLICATION COMMANDS ------------------------
+@bot.tree.command(name="hello")
+@app_commands.describe(thing="this says hello")
+async def hello(interaction: discord.Interaction, thing:str):
+    await interaction.response.send_message(f"This is an interaction {thing}", ephemeral=True)
+
+
 # ------------------------ TASKS ------------------------
 @tasks.loop(hours=12)
 async def warn_data():
@@ -214,6 +221,11 @@ async def on_ready():
     """
     called when the bot is initialized
     """
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced? {synced}")
+    except Exception as e:
+        log_events("excepption occured while syncing commands")
     events = []
     for guild in bot.guilds:
         events.append(f"Found guild {guild.name}")
