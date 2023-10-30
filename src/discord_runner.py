@@ -3,6 +3,7 @@ import time
 import discord
 from discord.ext import tasks
 from discord.ext import commands
+from discord import app_commands
 import asyncio
 from datetime import datetime as dt
 from datetime import timedelta as tdelta
@@ -17,32 +18,41 @@ from functions.news import News
 
 
 def get_creds():
-    f_name = "data/creds.json"
+    # f_name = "data/creds.json"
+    f_name = "/home/george/Documents/dev-creds.json"
     if not os.path.exists(f_name):
         raise Exception(f"please add a file with private tokens for discord and OpenAI [{f_name}]")
     with open(f_name, 'r') as fp:
         return json.load(fp)
 CREDS = get_creds()
 
+
+# log info
+LOG_FILE = "data/discord_runner.log"
+
+
 # ----------------------------------------------------------------------------------
+# channels for the bot and news, TODO: save these to a json file
 bot_channels = []
 news_channels = []
+
+# initialize the discord bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 # ----------------------------------------------------------------------------------
 
 
-# initialize libraries
+# initialize libraries with the credentials
 ai = OpenAIwrapper(CREDS["OPENAI_TOKEN"])
 news = News(CREDS["NEWSDATAIO_TOKEN"])
 
 
-# log info
-LOG_FILE = "data/discord_runner.log"
-
-
 def log_events(events):
+    """
+    logs a string or list of string events to the log file
+    """
+    print(events)
     now = datetime.datetime.now()
     if len(events) == 0:
         return
@@ -61,6 +71,9 @@ def log_events(events):
 # ------------------------ COMMANDS ------------------------
 @bot.command("gpt")
 async def ask4(ctx, *, arg):
+    """
+    Query GPT4 with command !gpt
+    """
     log_events(f"[{ctx.author}] ASKED GPT: {arg}")
     reply = ai.generate_response_gpt4(arg)
     index = 0
@@ -73,6 +86,9 @@ async def ask4(ctx, *, arg):
 
 @bot.command("imgen")
 async def image_generator(ctx, *, arg):
+    """
+    Generate an image with command !imgen
+    """
     log_events(f"[{ctx.author}] WANTS TO GENERATE IMAGE: {arg}")
     reply = ai.image_generator(arg)
     log_events(f"Reply is {reply}")
@@ -81,6 +97,9 @@ async def image_generator(ctx, *, arg):
 
 @bot.command("trending")
 async def trending(ctx):
+    """
+    Get a list of trending google searches with command !trending
+    """
     log_events(f"[{ctx.author}] QUERIED TRENDING")
     trends = get_trending_searches()
     await ctx.send(trends[:2000])
@@ -88,7 +107,10 @@ async def trending(ctx):
 
 @bot.command("log")
 async def get_log_data(ctx):
-    # todo make a dm, not a server command
+    """
+    display log data incase of unexpected behavior with command !log
+    todo make a dm, not a server command
+    """
     with open(LOG_FILE, 'r') as fp:
         txt = fp.readlines()
         txt = "".join(txt)
@@ -102,6 +124,9 @@ async def get_log_data(ctx):
 
 @bot.command("warn")
 async def get_warn_data(ctx):
+    """
+    Pulls warn act data and displays it with command !warn
+    """
     log_events("Sent warns message")
     warns = get_new_warn_data()
     await ctx.send(warns)
@@ -109,6 +134,10 @@ async def get_warn_data(ctx):
 
 @bot.command("news")
 async def get_news(ctx, *, args=None):
+    """
+    Shows most recent news with command !news
+    Use !news help to see arguments
+    """
     if args:
         args = args.split(" ")
         print(args)
@@ -137,19 +166,20 @@ async def get_news(ctx, *, args=None):
                 kwargs["size"] = int(kwargs["size"])
     else:
         kwargs = {"size": 5}
-    print(json.dumps(kwargs, indent=4))
-    # return
-    log_events("Sending News")
+    log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}")
     news_data = news.get_news(**kwargs)
     print(f"len news data is: {len(news_data)}")
     if len(news_data) == 0:
         news_data = "No news articles found"
     await ctx.send(news_data[:2000])
+
+
 # ------------------------ TASKS ------------------------
-
-
 @tasks.loop(hours=12)
 async def warn_data():
+    """
+    sends new data from warn act from texas every 12 hours
+    """
     log_events("Sent warns message")
     warns = get_new_warn_data()
     for channel in bot_channels:
@@ -157,6 +187,9 @@ async def warn_data():
 
 @tasks.loop(hours=12)
 async def news_notification():
+    """
+    Sends news notifications every 12 hours
+    """
     log_events("sending news")
     news_data = news.get_news(size=5)
     for channel in news_channels:
@@ -166,6 +199,9 @@ async def news_notification():
 # ------------------------ EVENTS ------------------------
 @bot.event
 async def on_message(message):
+    """
+    is called every time a message is sent in any channel the bot is a member of
+    """
     if message.author.bot:
         print("Ignoring bot message")
         return
@@ -175,6 +211,9 @@ async def on_message(message):
 
 @bot.event
 async def on_ready():
+    """
+    called when the bot is initialized
+    """
     events = []
     for guild in bot.guilds:
         events.append(f"Found guild {guild.name}")
@@ -221,5 +260,8 @@ async def wait_to_start(hr_start, delta_hours=12, funcs=[]):
 
 
 if __name__ == '__main__':
+    """
+    Start the bot
+    """
     bot.run(CREDS["DISCORD_TOKEN"])
 

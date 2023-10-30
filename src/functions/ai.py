@@ -3,7 +3,7 @@ import openai
 
 class OpenAIwrapper:
     """
-    wrapper to save the api key outside of this file
+    Wrapper to open AI library
     """
     def __init__(self, token):
         self.api_key = token
