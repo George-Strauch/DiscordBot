@@ -18,8 +18,8 @@ from functions.news import News
 
 
 def get_creds():
-    f_name = "data/creds.json"
-    # f_name = "~/Documents/dev-creds.json"
+    # f_name = "data/creds.json"
+    f_name = "/home/george/Documents/dev-creds.json"
     if not os.path.exists(f_name):
         raise Exception(f"please add a file with private tokens for discord and OpenAI [{f_name}]")
     with open(f_name, 'r') as fp:
@@ -84,13 +84,16 @@ async def ask4(interaction: discord.Interaction, prompt:str):
     # todo remove mention instructions from context
 
     log_events(f"[{interaction.user.name}] ASKED GPT: {prompt}")
+    await interaction.response.send_message("Working on that, one sec ...")
     reply = ai.generate_response_gpt4(prompt)
     index = 0
-    while index < len(reply):
-        msg = reply[index: index + 2000]
-        index = index+2000
-        await interaction.response.send_message(msg)
-        time.sleep(1)
+    await interaction.edit_original_response(content=reply[:2000])
+    # todo
+    # while index < len(reply):
+    #     msg = reply[index: index + 2000]
+    #     index = index+2000
+    #     await interaction.response.send_message(msg)
+    #     time.sleep(1)
 
 
 @bot.tree.command(name="imgen")
@@ -112,8 +115,9 @@ async def trending(interaction: discord.Interaction):
     Get a list of trending google searches with command !trending
     """
     log_events(f"[{interaction.user.name}] QUERIED TRENDING")
+    await interaction.response.send_message("Working on that, one sec ...")
     trends = get_trending_searches()
-    await interaction.response.send_message(trends[:2000])
+    await interaction.edit_original_response(content=trends[:2000])
 
 
 @bot.tree.command(name="log")
@@ -145,37 +149,60 @@ async def get_log_data(interaction: discord.Interaction):
 #     """
 #     Pulls warn act data and displays it
 #     """
+#     await interaction.edit_original_response(content=reply)
 #     log_events("Sent warns message")
 #     warns = get_new_warn_data()
 #     await interaction.response.send_message(warns)
 
-
-@bot.tree.command(name="news")
-@app_commands.describe(q="Query", domain="News Source", n="Number of news articles you want to see (Max 6)")
-@app_commands.choices(domain=[
+sources = [
     discord.app_commands.Choice(name="Fox news", value="foxnews"),
     discord.app_commands.Choice(name="NPR", value="npr"),
-    discord.app_commands.Choice(name="ABC News", value="abcnews")
+    discord.app_commands.Choice(name="ABC News", value="abcnews"),
+    discord.app_commands.Choice(name="Sky News", value="skynews"),
+    discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
+    discord.app_commands.Choice(name="The BBC", value="bbc"),
+    discord.app_commands.Choice(name="NBC News", value="nbcnews"),
+]
+categories = [
+    discord.app_commands.Choice(name="Business", value="business"),
+    discord.app_commands.Choice(name="Politics", value="politics"),
+    discord.app_commands.Choice(name="Science", value="science"),
+    discord.app_commands.Choice(name="Technology", value="technology"),
+    discord.app_commands.Choice(name="World", value="world"),
 
-])
-async def get_news(interaction: discord.Interaction, q: str="", n: int=5, domain: discord.app_commands.Choice[str]=""):
+]
+@bot.tree.command(name="news")
+@app_commands.describe(q="Search of news about a specific query", source="News Source (Default: npr,bbc,abcnews,nbcnews)", category="Category of news articles (Default: All)", n="Number of news articles you want to see (Max 6)")
+@app_commands.choices(source=sources)
+@app_commands.choices(category=categories)
+async def get_news(
+        interaction: discord.Interaction,
+        q: str="",
+        n: int=5,
+        source: discord.app_commands.Choice[str] = "",
+        category: discord.app_commands.Choice[str] = ""
+):
     """
     Shows most recent news
     """
     kwargs = {}
+
     if q != "":
         kwargs["q"] = q
     if n != 0:
         kwargs["size"] = min(n, 5)
-    if domain != "":
-        kwargs["doamin"] = domain.value
+    if source != "":
+        kwargs["domain"] = source.value
+    if category != "":
+        kwargs["category"] = category.value
 
     log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}")
+    await interaction.response.send_message("Working on that, one sec ...")
     news_data = news.get_news(**kwargs)
     print(f"len news data is: {len(news_data)}")
     if len(news_data) == 0:
         news_data = "No news articles found"
-    await interaction.response.send_message(news_data[:2000])
+    await interaction.edit_original_response(content=news_data[:2000])
 
 
 # ------------------------ TASKS ------------------------

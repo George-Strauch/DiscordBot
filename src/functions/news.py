@@ -12,8 +12,8 @@ class News:
             "language": "en",
             "prioritydomain": "top",
             "category": "business,politics,science,technology,world",
-            "country": 'us',
-            "domain": "nbcnews,reuters,npr"
+            "country": 'us,au,gb',
+            "domain": "npr,bbc,abcnews,nbcnews"
             # "domain": "abcnews,nbcnews,cnn,npr"
         }
         refine.update(kwargs)
