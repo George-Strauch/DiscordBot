@@ -19,6 +19,7 @@ from functions.news import News
 
 def get_creds():
     f_name = "data/creds.json"
+    # f_name = "~/Documents/dev-creds.json"
     if not os.path.exists(f_name):
         raise Exception(f"please add a file with private tokens for discord and OpenAI [{f_name}]")
     with open(f_name, 'r') as fp:
@@ -67,110 +68,114 @@ def log_events(events):
             fp.writelines(events)
 
 
-# ------------------------ COMMANDS ------------------------
-@bot.command("gpt")
-async def ask4(ctx, *, arg):
+# ------------------------ Utilities------------------------
+def clean_message(s: str=""):
+    return s
+
+
+
+# ------------------------ APPLICATION COMMANDS ------------------------
+@bot.tree.command(name="gpt", description="use chat GPT")
+@app_commands.describe(prompt="Prompt for GPT4")
+async def ask4(interaction: discord.Interaction, prompt:str):
     """
-    Query GPT4 with command !gpt
+    Query GPT4 with command
     """
-    log_events(f"[{ctx.author}] ASKED GPT: {arg}")
-    reply = ai.generate_response_gpt4(arg)
+    # todo remove mention instructions from context
+
+    log_events(f"[{interaction.user.name}] ASKED GPT: {prompt}")
+    reply = ai.generate_response_gpt4(prompt)
     index = 0
     while index < len(reply):
         msg = reply[index: index + 2000]
         index = index+2000
-        await ctx.send(msg)
+        await interaction.response.send_message(msg)
         time.sleep(1)
 
 
-@bot.command("imgen")
-async def image_generator(ctx, *, arg):
+@bot.tree.command(name="imgen")
+@app_commands.describe(prompt="Thing you want an image of")
+async def image_generator(interaction: discord.Interaction, prompt:str):
     """
-    Generate an image with command !imgen
+    Generate an image using from Open AI
     """
-    log_events(f"[{ctx.author}] WANTS TO GENERATE IMAGE: {arg}")
-    reply = ai.image_generator(arg)
+    log_events(f"[{interaction.user.name}] WANTS TO GENERATE IMAGE: {prompt}")
+    await interaction.response.send_message("Working on that, one sec ...")
+    reply = ai.image_generator(prompt)
     log_events(f"Reply is {reply}")
-    await ctx.send(reply)
+    await interaction.edit_original_response(content=reply)
 
 
-@bot.command("trending")
-async def trending(ctx):
+@bot.tree.command(name="trending")
+async def trending(interaction: discord.Interaction):
     """
     Get a list of trending google searches with command !trending
     """
-    log_events(f"[{ctx.author}] QUERIED TRENDING")
+    log_events(f"[{interaction.user.name}] QUERIED TRENDING")
     trends = get_trending_searches()
-    await ctx.send(trends[:2000])
+    await interaction.response.send_message(trends[:2000])
 
 
-@bot.command("log")
-async def get_log_data(ctx):
+@bot.tree.command(name="log")
+async def get_log_data(interaction: discord.Interaction):
     """
-    display log data incase of unexpected behavior with command !log
-    todo make a dm, not a server command
+    display log data in case of unexpected behavior
     """
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "NT buddy, but that's only for admins. Just for that you are now breathing manually and "
+            "aware there is no comfortable spot in your mouth for your tongue",
+            ephemeral=True
+        )
+        return
     with open(LOG_FILE, 'r') as fp:
         txt = fp.readlines()
         txt = "".join(txt)
-    await ctx.send(txt[-2000:])
+    await interaction.response.send_message(txt[-2000:], ephemeral=True)
     time.sleep(1)
     with open("data/log.txt", 'r') as fp:
         txt = fp.readlines()
         txt = "".join(txt)
-    await ctx.send(txt[-2000:])
+    await interaction.response.send_message(txt[-2000:], ephemeral=True)
 
 
-@bot.command("warn")
-async def get_warn_data(ctx):
-    """
-    Pulls warn act data and displays it with command !warn
-    """
-    log_events("Sent warns message")
-    warns = get_new_warn_data()
-    await ctx.send(warns)
+# @bot.tree.command(name="warn")
+# @app_commands.describe(pending="Show ones have not gone into effect yet")
+# async def get_warn_data(interaction: discord.Interaction, pending: bool=True):
+#     """
+#     Pulls warn act data and displays it
+#     """
+#     log_events("Sent warns message")
+#     warns = get_new_warn_data()
+#     await interaction.response.send_message(warns)
 
 
-@bot.command("news")
-async def get_news(ctx, *, args=None):
+@bot.tree.command(name="news")
+@app_commands.describe(q="Query", domain="News Source", n="Number of news articles you want to see (Max 6)")
+@app_commands.choices(domain=[
+    discord.app_commands.Choice(name="Fox news", value="foxnews"),
+    discord.app_commands.Choice(name="NPR", value="npr"),
+    discord.app_commands.Choice(name="ABC News", value="abcnews")
+
+])
+async def get_news(interaction: discord.Interaction, q: str="", n: int=5, domain: discord.app_commands.Choice[str]=""):
     """
-    Shows most recent news with command !news
-    Use !news help to see arguments
+    Shows most recent news
     """
-    if args:
-        args = args.split(" ")
-        print(args)
-        if "=" not in args[0]:
-            if args[0].lower() == "help":
-                message = ("Syntax: !news [query] [arg1=value] [arg2=value]\n"
-                           "All Arguments are optional\n"
-                           "Arguments:\n"
-                           "q: Search Query\n"
-                           "size: [int] Number of articles to show (this may be truncated if total message is >2000 "
-                           "characters)\n"
-                           "domain: News publishers (see list in link)\n"
-                           "category: Category (see list in link)\n"
-                           "https://newsdata.io/documentation")
-                await ctx.send(message)
-                return
-            args[0] = f"q={args[0]}"
-        if not all(["=" in x for x in args]):
-            await ctx.send(f"Invalid args, all args must be key=value. provided: {args}")
-            return
-        else:
-            kwargs = {x.split('=')[0].lower(): x.split('=')[1].lower() for x in args}
-            if "size" not in kwargs.keys():
-                kwargs["size"] = 5
-            else:
-                kwargs["size"] = int(kwargs["size"])
-    else:
-        kwargs = {"size": 5}
+    kwargs = {}
+    if q != "":
+        kwargs["q"] = q
+    if n != 0:
+        kwargs["size"] = min(n, 5)
+    if domain != "":
+        kwargs["doamin"] = domain.value
+
     log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}")
     news_data = news.get_news(**kwargs)
     print(f"len news data is: {len(news_data)}")
     if len(news_data) == 0:
         news_data = "No news articles found"
-    await ctx.send(news_data[:2000])
+    await interaction.response.send_message(news_data[:2000])
 
 
 # ------------------------ TASKS ------------------------
@@ -183,6 +188,7 @@ async def warn_data():
     warns = get_new_warn_data()
     for channel in bot_channels:
         await channel.send(warns)
+
 
 @tasks.loop(hours=12)
 async def news_notification():
@@ -213,6 +219,11 @@ async def on_ready():
     """
     called when the bot is initialized
     """
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced? {synced}")
+    except Exception as e:
+        log_events("exception occurred while syncing commands")
     events = []
     for guild in bot.guilds:
         events.append(f"Found guild {guild.name}")
