@@ -2,7 +2,7 @@ from newsdataapi import NewsDataApiClient
 # https://rapidapi.com/newslit/api/newslit-news-search/details # todo
 
 
-class News:
+class NewsFunctions:
     def __init__(self, api_key):
         self.client = NewsDataApiClient(apikey=api_key)
 
