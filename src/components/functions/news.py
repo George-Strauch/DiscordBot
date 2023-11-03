@@ -6,12 +6,13 @@ class NewsFunctions:
     def __init__(self, api_key):
         self.client = NewsDataApiClient(apikey=api_key)
 
+
     def get_news_raw(self, **kwargs):
         refine = {
             "size": 10,
             "language": "en",
             "prioritydomain": "top",
-            "category": "business,politics,science,technology,world",
+            # "category": "business,politics,science,technology,world",
             "country": 'us,au,gb',
             "domain": "npr,bbc,abcnews,nbcnews"
             # "domain": "abcnews,nbcnews,cnn,npr"

@@ -4,33 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 from .functions.news import NewsFunctions
 from .functions.warn_notice import get_new_warn_data
-from .utils import log_events, chunk_message
-
-
-news_choices = {
-    "sources": [
-        discord.app_commands.Choice(name="Fox news", value="foxnews"),
-        discord.app_commands.Choice(name="NPR", value="npr"),
-        discord.app_commands.Choice(name="ABC News", value="abcnews"),
-        discord.app_commands.Choice(name="Sky News", value="skynews"),
-        discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
-        discord.app_commands.Choice(name="The BBC", value="bbc"),
-        discord.app_commands.Choice(name="NBC News", value="nbcnews"),
-    ],
-    "categories": [
-        discord.app_commands.Choice(name="Business", value="business"),
-        discord.app_commands.Choice(name="Politics", value="politics"),
-        discord.app_commands.Choice(name="Science", value="science"),
-        discord.app_commands.Choice(name="Technology", value="technology"),
-        discord.app_commands.Choice(name="World", value="world"),
-    ],
-    "countries": [
-        discord.app_commands.Choice(name="United States", value="us"),
-        discord.app_commands.Choice(name="United Kingdom", value="gb"),
-        discord.app_commands.Choice(name="Australia", value="au"),
-        discord.app_commands.Choice(name="Germany", value="de"),
-    ]
-}
+from .utils import log_events, chunk_message, news_choices
 
 
 class News(commands.Cog):

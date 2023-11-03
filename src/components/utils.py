@@ -4,6 +4,33 @@ import datetime
 import asyncio
 from datetime import datetime as dt
 from datetime import timedelta as tdelta
+import discord
+
+
+news_categories = {'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food', 'health',
+                   'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world'}
+news_choices = {
+    "sources": [
+        discord.app_commands.Choice(name="Fox news", value="foxnews"),
+        discord.app_commands.Choice(name="NPR", value="npr"),
+        discord.app_commands.Choice(name="ABC News", value="abcnews"),
+        discord.app_commands.Choice(name="Sky News", value="skynews"),
+        discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
+        discord.app_commands.Choice(name="The BBC", value="bbc"),
+        discord.app_commands.Choice(name="NBC News", value="nbcnews"),
+    ],
+    "categories": [
+        discord.app_commands.Choice(name=x.capitalize(), value=x)
+        for x in news_categories
+    ],
+    "countries": [
+        discord.app_commands.Choice(name="United States", value="us"),
+        discord.app_commands.Choice(name="United Kingdom", value="gb"),
+        discord.app_commands.Choice(name="Australia", value="au"),
+        discord.app_commands.Choice(name="Germany", value="de"),
+    ]
+}
+
 
 
 def read_file(fname, default={}):
@@ -42,6 +69,8 @@ def log_events(events, log_file):
     logs a string or list of string events to the log file
     """
     print(events)
+    if log_file is None:
+        return
     now = datetime.datetime.now()
     if len(events) == 0:
         return

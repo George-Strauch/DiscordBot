@@ -1,10 +1,13 @@
 import discord
-from discord.ext import commands
-from cogs.utils import read_file, log_events
-from cogs.ai_cog import AI
-from cogs.news_cog import News
-from cogs.trends_cog import Trends
-from cogs.finance_cog import Finance
+from discord.ext import commands, tasks
+from components.utils import read_file, log_events
+from components.ai_cog import AI
+from components.news_cog import News
+from components.trends_cog import Trends
+from components.finance_cog import Finance
+from components.interactions_cog import Interactions
+from components.task_cogs import NewsTask
+from components.admins_cog import AdminActions
 
 
 class BasedClient(commands.Bot):
@@ -63,17 +66,6 @@ class BasedClient(commands.Bot):
             #         events.append(f"news room in {guild.name}")
             #         news_channels.append(channel)
 
-    async def load_tasks(self):
-        # task_functions = [
-        #     warn_data,
-        #     news_notification
-        # ]
-        # await wait_to_start(
-        #     hr_start=9,
-        #     delta_hours=12,
-        #     funcs=task_functions
-        # )
-        pass
 
     async def load_cogs(self):
         print("Loading Cogs")
@@ -81,6 +73,9 @@ class BasedClient(commands.Bot):
         await self.add_cog(News(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
         await self.add_cog(Trends(self))
         await self.add_cog(Finance(self))
+        await self.add_cog(Interactions(self))
+        await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
+        await self.add_cog(AdminActions(self))
         synced = await self.tree.sync()
         print(f"Synced {len(synced)} command(s).")
         print(synced)
@@ -90,7 +85,10 @@ class BasedClient(commands.Bot):
 if __name__ == '__main__':
     cred_file = "/home/george/Documents/dev-creds.json"
     CREDS = read_file(cred_file)
-    # CREDS = read_file("data/creds.json")
+
+    # cred_file = "data/creds.json"
+    # CREDS = read_file(cred_file)
+
     newbot = BasedClient(creds=CREDS)
     newbot.run(CREDS["DISCORD_TOKEN"])
 

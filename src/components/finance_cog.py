@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from .functions.finance import TickerInfo
 from .utils import log_events, chunk_message
+import io
 
 
 class Finance(commands.Cog):
@@ -19,5 +20,15 @@ class Finance(commands.Cog):
         """
         log_events(f"[{interaction.user.name}] WANTS TO GET TICKER DATA FOR: {ticker}", self.log_file)
         await interaction.response.send_message("Working on that, one sec ...")
-        reply = self.ticker_info.ticker_data(ticker)
-        await interaction.edit_original_response(content=reply)
+        reply, prices = self.ticker_info.ticker_data(ticker)
+        # await interaction.edit_original_response(content=reply)
+        picture_plot = self.ticker_info.get_img(prices)
+        with io.BytesIO() as image_binary:
+            print(image_binary)
+            picture_plot.savefig(image_binary, format='PNG', bbox_inches='tight', pad_inches=0, transparent=True)
+            image_binary.seek(0)
+            # await interaction.followup.send(file=discord.File(fp=image_binary, filename='image.png'))
+            await interaction.channel.send(content=reply, file=discord.File(fp=image_binary, filename='image.png'))
+
+
+
