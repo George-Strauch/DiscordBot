@@ -75,7 +75,8 @@ class News(commands.Cog):
                     title=x["Title"],
                     url=x["Link"],
                     description=x["Source"],
-                    color=0x97acc2
+                    color=0x97acc2,
+                    type="article"
                     # color=0x2e4155
                 )
                 for x in news_articles

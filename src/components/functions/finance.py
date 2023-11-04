@@ -31,10 +31,9 @@ class TickerInfo:
             p2 = round(day2.Close, 2)
 
             return (
-                f"{ticker.upper()}:\n"
                 f"{d1}: ${p1}\n"
                 f"{d2}: ${p2}\n"
-                f"Change: ${round(p2-p1, 2)} ({round(((p2-p1)/p2)*100, 2)}%)\n"
+                f"Δ ${round(p2-p1, 2)} ({round(((p2-p1)/p2)*100, 2)}%)\n"
                 f"Today's Volume: {round(day2.Volume)}\n"
                 # f"More info will be coming to this response soon!"
             ), list(h.Open)
@@ -48,7 +47,7 @@ class TickerInfo:
         plt.rcParams["figure.autolayout"] = True
 
         plt.figure()
-        plt.plot(y)
+        plt.plot(y, color="#97acc2")
         plt.axis('off')
         return plt
 

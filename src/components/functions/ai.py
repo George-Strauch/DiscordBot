@@ -20,11 +20,11 @@ class OpenAIwrapper:
             }
         ]
 
-    def generate_response_gpt4(self, _input):
+    def generate_response_gpt(self, _input, model="gpt-4"):
         try:
             message = self.context + [{"role": "user", "content": _input}]
             chat = openai.ChatCompletion.create(
-                model="gpt-4", messages=message
+                model=model, messages=message
             )
             reply = chat.choices[0].message.content
             return reply

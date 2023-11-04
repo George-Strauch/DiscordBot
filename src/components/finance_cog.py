@@ -28,7 +28,14 @@ class Finance(commands.Cog):
             picture_plot.savefig(image_binary, format='PNG', bbox_inches='tight', pad_inches=0, transparent=True)
             image_binary.seek(0)
             # await interaction.followup.send(file=discord.File(fp=image_binary, filename='image.png'))
-            await interaction.channel.send(content=reply, file=discord.File(fp=image_binary, filename='image.png'))
+            e = discord.Embed(
+                title=ticker.upper(),
+                description=reply,
+                color=0x97acc2,
+                # color=0x2e4155
+            )
+            # await interaction.channel.send(content=reply, file=discord.File(fp=image_binary, filename='image.png'))
+            await interaction.channel.send(embed=e, file=discord.File(fp=image_binary, filename='image.png'))
 
 
 

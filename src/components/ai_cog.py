@@ -13,14 +13,27 @@ class AI(commands.Cog):
 
     @app_commands.command(name="gpt", description="use chat GPT")
     @app_commands.describe(prompt="Prompt for GPT4")
-    async def ask4(self, interaction: discord.Interaction, prompt: str):
+    @app_commands.describe(model="GPT model (default GPT4)")
+    @app_commands.choices(model=[
+        discord.app_commands.Choice(name="GPT4", value="gpt-4"),
+        discord.app_commands.Choice(name="GPT3", value="gpt-3.5-turbo-0613"),
+    ])
+    async def ask_gpt(
+            self,
+            interaction: discord.Interaction,
+            prompt: str,
+            model: discord.app_commands.Choice[str] = "gpt-4"
+    ):
         """
-        Query GPT4
+        Query GPT
         """
         # todo remove mention instructions from context
-        log_events(f"[{interaction.user.name}] ASKED GPT: {prompt}", self.log_file)
+        model = model if isinstance(model, str) else model.value
+        log_events(f"[{interaction.user.name}] ASKED GPT: {prompt} with model: {model}", self.log_file)
         await interaction.response.send_message("Working on that, one sec ...")
-        reply = self.open_ai.generate_response_gpt4(prompt)
+        reply = self.open_ai.generate_response_gpt(prompt, model=model)
+        if "```" not in reply:
+            reply = f"``{reply}``"
         reply = chunk_message(reply)
         await interaction.edit_original_response(content=reply[0])
 
