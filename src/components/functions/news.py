@@ -18,6 +18,10 @@ class NewsFunctions:
             # "domain": "abcnews,nbcnews,cnn,npr"
         }
         refine.update(kwargs)
+        # arguments = refine.copy()
+        bad = [k for k, v in refine.items() if v==""]
+        for b in bad:
+            del refine[b]
         try:
             results = self.client.news_api(**refine)
             return results
@@ -29,9 +33,8 @@ class NewsFunctions:
 
     def get_news(self, **kwargs):
         n = self.get_news_raw(**kwargs)
-        text = ""
         if "error" in n.keys():
-            text = f"An error occurred getting news: {n['error']}"
+            return f"An error occurred getting news: {n['error']}"
         else:
             items = [
                 {
@@ -41,8 +44,4 @@ class NewsFunctions:
                 }
                 for x in n["results"]
             ]
-            for x in items:
-                for k, v in x.items():
-                    text = text + f"{v}\n"
-                text = text + "\n\n"
-        return text
+            return items

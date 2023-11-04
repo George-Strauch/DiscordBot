@@ -66,8 +66,18 @@ class News(commands.Cog):
 
         log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}", self.log_file)
         await interaction.response.send_message("Working on that, one sec ...")
-        news_data = self.news_api.get_news(**kwargs)
-        print(f"len news data is: {len(news_data)}")
-        if len(news_data) == 0:
-            news_data = "No news articles found"
-        await interaction.edit_original_response(content=news_data[:2000])
+        news_articles = self.news_api.get_news(**kwargs)
+        if len(news_articles) == 0:
+            await interaction.edit_original_response(content="No news articles found with the provided query")
+        else:
+            embeds = [
+                discord.Embed(
+                    title=x["Title"],
+                    url=x["Link"],
+                    description=x["Source"],
+                    color=0x97acc2
+                    # color=0x2e4155
+                )
+                for x in news_articles
+            ]
+            await interaction.edit_original_response(embeds=embeds)

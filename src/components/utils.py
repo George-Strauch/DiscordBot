@@ -6,7 +6,6 @@ from datetime import datetime as dt
 from datetime import timedelta as tdelta
 import discord
 
-
 news_categories = {'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food', 'health',
                    'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world'}
 news_choices = {
@@ -18,16 +17,21 @@ news_choices = {
         discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
         discord.app_commands.Choice(name="The BBC", value="bbc"),
         discord.app_commands.Choice(name="NBC News", value="nbcnews"),
+        discord.app_commands.Choice(name="ANY", value=""),
     ],
     "categories": [
         discord.app_commands.Choice(name=x.capitalize(), value=x)
         for x in news_categories
+    ] + [
+        discord.app_commands.Choice(name="Important", value="business,politics,science,technology,world"),
+        discord.app_commands.Choice(name="ANY", value=""),
     ],
     "countries": [
         discord.app_commands.Choice(name="United States", value="us"),
         discord.app_commands.Choice(name="United Kingdom", value="gb"),
         discord.app_commands.Choice(name="Australia", value="au"),
         discord.app_commands.Choice(name="Germany", value="de"),
+        discord.app_commands.Choice(name="ANY", value=""),
     ]
 }
 
