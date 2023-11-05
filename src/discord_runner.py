@@ -83,11 +83,11 @@ class BasedClient(commands.Bot):
 
 
 if __name__ == '__main__':
-    # cred_file = "/home/george/Documents/dev-creds.json"
-    # CREDS = read_file(cred_file)
-
-    cred_file = "data/creds.json"
+    cred_file = "/home/george/Documents/dev-creds.json"
     CREDS = read_file(cred_file)
+
+    # cred_file = "data/creds.json"
+    # CREDS = read_file(cred_file)
 
     newbot = BasedClient(creds=CREDS)
     newbot.run(CREDS["DISCORD_TOKEN"])

@@ -36,6 +36,8 @@ news_choices = {
 }
 
 
+theme_colors = ["#97acc2", "#a0c297", "#c2b388", "#bd8d8c", "#9595c2", "#c19bc2", "#bf8f94"]
+
 
 def read_file(fname, default={}):
     if not os.path.exists(fname):
