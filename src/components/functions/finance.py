@@ -1,11 +1,6 @@
-import io
-import json
 import traceback
-
-from PIL import Image
 import matplotlib.pyplot as plt
 import yfinance as yf
-
 
 
 class TickerInfo:
@@ -58,7 +53,7 @@ class TickerInfo:
                 this_tickers_data["embed_str"] = (
                     f"{this_tickers_data['dates'][0]} ${p1:.2f}\n"
                     f"{this_tickers_data['dates'][-1]} ${p2:.2f}\n"
-                    f"{'Δ'.ljust(str_adjust, ' ')} ${p2-p1:.2f} ({((p2-p1)/p2)*100:.2f}%)\n"
+                    f"{'Δ'.ljust(str_adjust, ' ')} ${p2-p1:.2f} ({((p2-p1)/p1)*100:.2f}%)\n"
                     f"{'Volume'.ljust(str_adjust, ' ')} {round(this_tickers_data['volume'][-1])}\n"
                 )
                 data[t_n.upper()] = this_tickers_data
@@ -76,7 +71,6 @@ class TickerInfo:
         fig, ax = plt.subplots(figsize=(3.9/3, 1/3), dpi=300)
         # fig.yscale("log")
         for t, tdata in tickers.items():
-
             prices = list(reversed(tdata["prices"]))
             norm = prices[-1]
             prices = [x/norm for x in prices]

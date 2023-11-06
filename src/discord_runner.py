@@ -1,3 +1,5 @@
+import traceback
+
 import discord
 from discord.ext import commands, tasks
 from components.utils import read_file, log_events
@@ -6,7 +8,7 @@ from components.news_cog import News
 from components.trends_cog import Trends
 from components.finance_cog import Finance
 from components.interactions_cog import Interactions
-from components.task_cogs import NewsTask
+# from components.task_cogs import NewsTask
 from components.admins_cog import AdminActions
 
 
@@ -39,6 +41,7 @@ class BasedClient(commands.Bot):
         try:
             await self.load_cogs()
         except Exception as e:
+            print(traceback.format_exc())
             log_events("exception occurred while syncing commands", self.log_file)
         events = [f'Logged on as {self.user}!']
         log_events(events, self.log_file )
@@ -70,11 +73,11 @@ class BasedClient(commands.Bot):
     async def load_cogs(self):
         print("Loading Cogs")
         await self.add_cog(AI(self, api_key=self.creds["OPENAI_TOKEN"]))
-        await self.add_cog(News(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
+        await self.add_cog(News(self, api_key=self.creds["NEWSDATAIO_TOKEN"], guilds=self.guilds))
         await self.add_cog(Trends(self))
         await self.add_cog(Finance(self))
         await self.add_cog(Interactions(self))
-        await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
+        # await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
         await self.add_cog(AdminActions(self))
         synced = await self.tree.sync()
         print(f"Synced {len(synced)} command(s).")

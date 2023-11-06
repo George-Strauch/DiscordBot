@@ -1,10 +1,12 @@
+import json
+
 import discord
 from discord.ext import commands
 from discord import app_commands
 from .functions.finance import TickerInfo
 from .utils import log_events, chunk_message, theme_colors
-import io
 from PIL import Image
+import io
 
 
 class Finance(commands.Cog):
@@ -54,11 +56,9 @@ class Finance(commands.Cog):
             with io.BytesIO() as image_binary:
                 picture_plot.savefig(image_binary, format='PNG', bbox_inches='tight', pad_inches=0, transparent=True)
                 pillow_image = Image.open(image_binary)
-                pillow_image.show()
                 im_flipped = pillow_image.transpose(method=Image.FLIP_LEFT_RIGHT)
 
             with io.BytesIO() as image_binary:
-                im_flipped.show()
                 im_flipped.save(image_binary, format='PNG')
                 image_binary.seek(0)
                 embeds = [
@@ -70,6 +70,4 @@ class Finance(commands.Cog):
                     for k, x in ticker_data.items()
                 ]
                 await interaction.channel.send(embeds=embeds, file=discord.File(fp=image_binary, filename='image.png'))
-
-
 

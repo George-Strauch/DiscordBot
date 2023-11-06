@@ -6,37 +6,11 @@ from datetime import datetime as dt
 from datetime import timedelta as tdelta
 import discord
 
-news_categories = {'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food', 'health',
-                   'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world'}
-news_choices = {
-    "sources": [
-        discord.app_commands.Choice(name="Fox news", value="foxnews"),
-        discord.app_commands.Choice(name="NPR", value="npr"),
-        discord.app_commands.Choice(name="ABC News", value="abcnews"),
-        discord.app_commands.Choice(name="Sky News", value="skynews"),
-        discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
-        discord.app_commands.Choice(name="The BBC", value="bbc"),
-        discord.app_commands.Choice(name="NBC News", value="nbcnews"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ],
-    "categories": [
-        discord.app_commands.Choice(name=x.capitalize(), value=x)
-        for x in news_categories
-    ] + [
-        discord.app_commands.Choice(name="Important", value="business,politics,science,technology,world"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ],
-    "countries": [
-        discord.app_commands.Choice(name="United States", value="us"),
-        discord.app_commands.Choice(name="United Kingdom", value="gb"),
-        discord.app_commands.Choice(name="Australia", value="au"),
-        discord.app_commands.Choice(name="Germany", value="de"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ]
-}
+
 
 
 theme_colors = ["#97acc2", "#a0c297", "#c2b388", "#bd8d8c", "#9595c2", "#c19bc2", "#bf8f94"]
+# theme_colors = [int(x.replace("#", ""), base=16) for x in theme_colors]
 
 
 def read_file(fname, default={}):
@@ -112,6 +86,11 @@ async def wait_to_start(hr_start, delta_hours=12, funcs=[]):
     await asyncio.sleep(seconds)
     for f in funcs:
         f.start()
+
+
+
+
+
 
 
 
