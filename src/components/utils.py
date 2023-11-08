@@ -9,8 +9,14 @@ import discord
 
 
 
-theme_colors = ["#97acc2", "#a0c297", "#c2b388", "#bd8d8c", "#9595c2", "#c19bc2", "#bf8f94"]
+theme_colors = [
+    "#F1935C", "#BA6B57", "#E7B2A5", "#30475E",
+    "#A7D2CB", "#F2D388", "#C98474", "#874C62",
+]
 # theme_colors = [int(x.replace("#", ""), base=16) for x in theme_colors]
+
+
+blank_px = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg=="
 
 
 def read_file(fname, default={}):
@@ -90,6 +96,20 @@ async def wait_to_start(hr_start, delta_hours=12, funcs=[]):
 
 
 
+
+    # todo finish
+    # @app_commands.command(name="warn")
+    # @app_commands.describe(pending="Show ones have not gone into effect yet")
+    # async def get_warn_data(self, interaction: discord.Interaction, pending: bool=True):
+    #     """
+    #     Pulls warn act data and displays it
+    #     # todo pending
+    #     """
+    #     log_events(f"Sending warn data", self.log_file)
+    #     await interaction.response.send_message("Working on that, one sec ...")
+    #     log_events("Sent warns message", self.log_file)
+    #     warns = get_new_warn_data()
+    #     await interaction.edit_original_response(content=warns)
 
 
 

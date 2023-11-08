@@ -20,7 +20,6 @@ class RoleSelectDD(Select):
         print(new_roles)
         print(new_roles[0].__dir__())
         print(type(new_roles[0]))
-
         await interaction.user.add_roles(new_roles)
 
 
@@ -88,6 +87,8 @@ class Interactions(commands.Cog):
         """
         v = View()
         v.add_item(RoleSelectDD(interaction.guild))
+        # https://guide.pycord.dev/interactions/ui-components/buttons
+        v.add_item()
         # v = RoleSelectDDView(interaction.guild)
         await interaction.response.send_message(
             "Here are some roles for you to select",

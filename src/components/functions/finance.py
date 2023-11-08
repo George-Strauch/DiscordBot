@@ -22,7 +22,6 @@ class TickerInfo:
             "5y": "1mo",
             "max": "3mo",
         }
-        print("params ", tickers, period, intervals.get(period))
 
         try:
             str_adjust = 15
@@ -35,21 +34,24 @@ class TickerInfo:
                     "dates": [],
                     "prices": [],
                     "volume": [],
-                    "embed_str": ""
+                    "embed_str": "",
+                    "interval": intervals.get(period, "1d")
                 }
                 for instant in list(h):
                     t_ = str(instant.name).split(" ")
                     if period == "1d":
-                        t_ = t_[1].split("-")[0]
+                        t_ = t_[1].split("-")[0][:-3] + " EST"
                         t_ = t_.ljust(str_adjust, " ")
                     else:
                         t_ = t_[0].ljust(str_adjust, " ")
                     this_tickers_data["dates"].append(t_)
-                    this_tickers_data["prices"].append(instant.Open)
+                    this_tickers_data["prices"].append(instant.Close)
                     this_tickers_data["volume"].append(instant.Volume)
 
                 p1 = this_tickers_data['prices'][0]
                 p2 = this_tickers_data['prices'][-1]
+                # this_tickers_data["last"] = p2
+
                 this_tickers_data["embed_str"] = (
                     f"{this_tickers_data['dates'][0]} ${p1:.2f}\n"
                     f"{this_tickers_data['dates'][-1]} ${p2:.2f}\n"
@@ -65,10 +67,9 @@ class TickerInfo:
 
 
 
-
     def get_plt(self, tickers):
         # todo reverse then invert
-        fig, ax = plt.subplots(figsize=(3.9/3, 1/3), dpi=300)
+        fig, ax = plt.subplots(figsize=(4.1/3, 1/3), dpi=300)
         # fig.yscale("log")
         for t, tdata in tickers.items():
             prices = list(reversed(tdata["prices"]))

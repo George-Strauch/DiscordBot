@@ -1,3 +1,5 @@
+import json
+
 from newsdataapi import NewsDataApiClient
 # https://rapidapi.com/newslit/api/newslit-news-search/details # todo
 
@@ -32,16 +34,35 @@ class NewsFunctions:
             return {"error": errors}
 
     def get_news(self, **kwargs):
+
         n = self.get_news_raw(**kwargs)
         if "error" in n.keys():
             return f"An error occurred getting news: {n['error']}"
         else:
+            sep = "\u200b\t|\u200b\t"
+            sep = "  |  "
             items = [
                 {
                     "Title": x["title"].replace(r"\u2019", "'"),
                     "Link": x["link"],
-                    "Source": f'[{x["pubDate"]}] {x["source_id"]} ({",".join(x["country"])})'
-                }
+                    "description": x['description'],
+                    "img_url": x["image_url"],
+                    # "footer": f'{x["source_id"]} \t|\t {x["pubDate"]} \t|\t {",".join(x["country"])} \t|\t Source: Newsdata.io'
+                    "footer": f'{x["source_id"]}{sep}{x["pubDate"]}{sep}Source: Newsdata.io'
+
+            }
                 for x in n["results"]
             ]
             return items
+
+
+
+
+if __name__ == '__main__':
+    n = NewsFunctions("pub_32005769a84dc89f492b5cb67b8bc78808ce2")
+    k = {
+        "size": 5,
+        "domain": "foxnews"
+    }
+    x = n.get_news_raw()
+    print(json.dumps(x, indent=4))

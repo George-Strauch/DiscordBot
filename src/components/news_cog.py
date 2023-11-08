@@ -1,41 +1,34 @@
 import datetime
 import json
+import asyncio
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
+from discord.ui import Select, View
 from .functions.news import NewsFunctions
 from .functions.warn_notice import get_new_warn_data
 from .utils import log_events, chunk_message, theme_colors
 from .database import NewsNotificationDatabase
+from datetime import datetime as dt
+from datetime import timedelta as tdelta
 
 
-news_categories = {'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food', 'health',
-                   'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world'}
-news_choices = {
-    "sources": [
-        discord.app_commands.Choice(name="Fox news", value="foxnews"),
-        discord.app_commands.Choice(name="NPR", value="npr"),
-        discord.app_commands.Choice(name="ABC News", value="abcnews"),
-        discord.app_commands.Choice(name="Sky News", value="skynews"),
-        discord.app_commands.Choice(name="Yahoo! News", value="yahoo"),
-        discord.app_commands.Choice(name="The BBC", value="bbc"),
-        discord.app_commands.Choice(name="NBC News", value="nbcnews"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ],
-    "categories": [
-        discord.app_commands.Choice(name=x.capitalize(), value=x)
-        for x in news_categories
-    ] + [
-        discord.app_commands.Choice(name="Important", value="business,politics,science,technology,world"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ],
-    "countries": [
-        discord.app_commands.Choice(name="United States", value="us"),
-        discord.app_commands.Choice(name="United Kingdom", value="gb"),
-        discord.app_commands.Choice(name="Australia", value="au"),
-        discord.app_commands.Choice(name="Germany", value="de"),
-        discord.app_commands.Choice(name="ANY", value=""),
-    ]
+news_categories = {
+    'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food',
+    'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world', 'health'
+}
+news_categories = {x: x for x in news_categories}.update({"ANY": ""})
+
+
+sources = {
+    "Fox news": "foxnews",
+    "NPR": "npr",
+    "ABC News": "abcnews",
+    "Sky News": "skynews",
+    "Yahoo! News": "yahoo",
+    "The BBC": "bbc",
+    "NBC News": "nbcnews",
+    "ANY": ""
 }
 param_descriptions = {
     "q": "Search of news about a specific query, (Default everything)",
@@ -44,6 +37,92 @@ param_descriptions = {
     "n": "Number of news articles you want to see (Default 5, Max 6)",
     "country": "The country of the news article's intended audience (Default US, AU, GB)"
 }
+countries = {
+    "United States": "us",
+    "United Kingdom": "gb",
+    "Germany": "de",
+    "Australia": "au",
+    "ANY": ""
+}
+
+
+news_choices = {
+    "sources": [
+        discord.app_commands.Choice(name=k, value=v)
+        for k, v in sources.items()
+    ],
+    "categories": [
+        discord.app_commands.Choice(name=k.capitalize(), value=v)
+        for k, v in news_categories.items()
+    ] + [
+        discord.app_commands.Choice(
+            name="Important",
+            value="business,politics,science,technology,world"
+        )
+    ],
+    "countries": [
+        discord.app_commands.Choice(name=k, value=v)
+        for k, v in countries.items()
+    ]
+}
+
+
+
+class CreatePeriodicNewsNotification(View):
+    def __init__(self, original_interaction, notification_creator):
+        super().__init__()
+        self.add_item(CategorySelect(self.category_callback))
+        self.add_item(CategorySelect(self.source_callback))
+        self.add_item(CategorySelect(self.country_callback))
+        # self.add_item(CategorySelect(self.category_callback))
+        self.original_interaction = original_interaction
+        self.notification_creator = notification_creator
+        self.parameters = {}
+
+
+    async def category_callback(self, interaction: discord.Interaction):
+        pass
+
+    async def source_callback(self, interaction: discord.Interaction):
+        pass
+
+    async def country_callback(self, interaction: discord.Interaction):
+        pass
+
+    async def finish_button_callback(self, interaction: discord.Interaction):
+        pass
+
+
+class CategorySelect(Select):
+    def __init__(self, call_back):
+        default = "business,politics,science,technology,world".split(',')
+        options = [discord.SelectOption(label=k.capitalize(), value=v, default=v in default) for k, v in news_categories]
+        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Categories")
+        self.callback = call_back
+    # async def callback(self, interaction: discord.Interaction):
+    #     pass
+
+
+class SourceSelect(Select):
+    def __init__(self, call_back):
+        default = ["npr"]
+        options = [discord.SelectOption(label=k, value=v, default=v in default) for k, v in sources]
+        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Sources")
+        self.callback = call_back
+    # async def callback(self, interaction: discord.Interaction):
+    #     pass
+
+
+class CountrySelect(Select):
+    def __init__(self, call_back):
+        default = []
+        options = [discord.SelectOption(label=k, value=v, default=v in default) for k, v in countries]
+        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Countries")
+        self.callback = call_back
+    # async def callback(self, interaction: discord.Interaction):
+    #     pass
+
+
 
 
 class News(commands.Cog):
@@ -52,29 +131,11 @@ class News(commands.Cog):
         self.log_file = "data/news.log"
         self.news_api = NewsFunctions(api_key)
         self.active_tasks = {}
-        self.db = NewsNotificationDatabase("data/news_notification2.db")
+        self.db = NewsNotificationDatabase("data/news_notification.db")
         print("loading tasks from db")
         for g in guilds:
             self.load_from_db(g)
         print("done loading tasks from db")
-        print("----------------")
-        print(self.active_tasks)
-        print("----------------")
-
-
-
-    # @app_commands.command(name="warn")
-    # @app_commands.describe(pending="Show ones have not gone into effect yet")
-    # async def get_warn_data(self, interaction: discord.Interaction, pending: bool=True):
-    #     """
-    #     Pulls warn act data and displays it
-    #     # todo pending
-    #     """
-    #     log_events(f"Sending warn data", self.log_file)
-    #     await interaction.response.send_message("Working on that, one sec ...")
-    #     log_events("Sent warns message", self.log_file)
-    #     warns = get_new_warn_data()
-    #     await interaction.edit_original_response(content=warns)
 
 
     @app_commands.command(name="news")
@@ -114,15 +175,8 @@ class News(commands.Cog):
             await interaction.edit_original_response(content="No news articles found with the provided query")
         else:
             embeds = [
-                discord.Embed(
-                    title=x["Title"],
-                    url=x["Link"],
-                    description=x["Source"],
-                    color=0x97acc2,
-                    type="article"
-                    # color=0x2e4155
-                )
-                for x in news_articles
+                self.create_article_embed(article=x, color=theme_colors[i])
+                for i, x in enumerate(news_articles)
             ]
             await interaction.edit_original_response(embeds=embeds)
 
@@ -189,7 +243,6 @@ class News(commands.Cog):
             notification_id=new_id,
             data_dict=self.active_tasks[interaction.guild.id][new_id]
         )
-        # print(self.active_tasks)
         embed = self.create_news_notification_loop_embed(
             guild_id=interaction.guild.id, _id=new_id, color=theme_colors[0]
         )
@@ -201,7 +254,6 @@ class News(commands.Cog):
 
     @app_commands.command(name="get_news_notifications")
     async def get_news_notifications(self, interaction: discord.Interaction,):
-        str_adjust = 18
         if interaction.guild.id not in self.active_tasks:
             await interaction.response.send_message(
                 content="No news notifications have been set up for this guild",
@@ -209,8 +261,11 @@ class News(commands.Cog):
             )
         else:
             embeds = [
-                self.create_news_notification_loop_embed(guild_id=interaction.guild.id, _id=x, color=theme_colors[0])
-                for x in self.active_tasks[interaction.guild.id]
+                self.create_news_notification_loop_embed(
+                    guild_id=interaction.guild.id,
+                    _id=x,
+                    color=theme_colors[i % len(theme_colors)])
+                for i, x in enumerate(self.active_tasks[interaction.guild.id])
             ]
             await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
@@ -228,7 +283,7 @@ class News(commands.Cog):
                 ephemeral=True
             )
         else:
-            self.active_tasks[interaction.guild.id][id]["task"].stop()
+            self.active_tasks[interaction.guild.id][id]["task"].cancel()
             del self.active_tasks[interaction.guild.id][id]
             self.db.delete_news_notification_from_db(
                 guild_id=interaction.guild_id,
@@ -241,45 +296,56 @@ class News(commands.Cog):
             )
 
 
-    async def news_notification(self, channel, no_news_update, quiet_start=False, task=None, **kwargs):
+    async def news_notification(self, channel, no_news_update, quiet_start=False, task=None, loop_id=None, **kwargs):
         """
         Sends news notifications in a provided time interval
         """
+        print("loop iteration: ", task.current_loop)
+        print(f"next occurring at {task.next_iteration}")
         if quiet_start and task:
             if task.current_loop == 0:
-                # now = dt.now()
-                # start = dt(
-                #     year=now.year,
-                #     month=now.month,
-                #     day=now.day,
-                #     hour=hr_start,
-                #     minute=0,
-                #     second=0
-                # )
-                # while now > start:
-                #     start = start + tdelta(hours=delta_hours)
-                #
-                # seconds = start - now
-                # seconds = seconds.seconds
-                # print(f"waiting {seconds} seconds to start tasks at {start}")
-                # # log_events(f"waiting {seconds} seconds to start tasks at {start}", LOG_FILE)
-                # await asyncio.sleep(seconds)
+                loop_data = self.active_tasks[channel.guild.id][loop_id]
+                t = loop_data["started"].split(": ")[1].split(":")
+                now = dt.now()
+                print(f"now = {now}")
+                start = dt(
+                    year=now.year,
+                    month=now.month,
+                    day=now.day,
+                    hour=int(t[0]),
+                    minute=int(t[1]),
+                    second=0
+                )
+                start = start - tdelta(days=1)
+                hours = loop_data["run_params"]["hours"]
+                print(hours)
+                while now > start:
+                    start = start + tdelta(hours=hours)
+                seconds = start - now
+                seconds = seconds.seconds
+                print(f"waiting {seconds} seconds to start tasks at {start}")
+                await asyncio.sleep(seconds)
+                # todo, make sure this resets the thing
+                task.restart(
+                    channel=channel,
+                    no_news_update=no_news_update,
+                    task=task,
+                    quiet_start=False,
+                    loop_id=loop_id,
+                    **kwargs
+                )
                 return
+
+                # return
         log_events("news task sending news sending news", self.log_file)
         news_articles = self.news_api.get_news(**kwargs)
         if len(news_articles) == 0:
-            if no_news_update:
+            if no_news_update or (task and task.current_loop == 0):
                 await channel.send(content="No news articles found with the provided query")
         else:
             embeds = [
-                discord.Embed(
-                    title=x["Title"],
-                    url=x["Link"],
-                    description=x["Source"],
-                    color=int(theme_colors[0].replace("#", ""), base=16)
-                    # color=0x2e4155
-                )
-                for x in news_articles
+                self.create_article_embed(article=x, color=theme_colors[i])
+                for i, x in enumerate(news_articles)
             ]
             await channel.send(embeds=embeds)
 
@@ -309,6 +375,29 @@ class News(commands.Cog):
         )
 
 
+    def create_article_embed(self, article: dict, color=theme_colors[0]):
+        wsp = "\u200b\t"
+        e = discord.Embed(
+            title=article["Title"],
+            url=article["Link"],
+            description=article["description"],
+            color=int(color.replace("#", ""), base=16),
+            type="article"
+        )
+
+        # e.set_footer(text=f"{wsp*20} Source: News")
+        e.set_footer(text=article["footer"])
+
+
+        if "img_url" in article and article["img_url"] not in ["", None]:
+            print(f"setting url: {article['img_url']}")
+            e.set_thumbnail(url=article["img_url"])
+        else:
+            print(f"not setting url")
+            print(json.dumps(article, indent=5))
+        return e
+
+
     def load_from_db(self, guild):
         tasks_for_guild = self.db.read_news_notification_to_db(guild.id)
         if tasks_for_guild == {}:
@@ -320,7 +409,7 @@ class News(commands.Cog):
                 return
             tasks_for_guild[k]["news_params"]["channel"] = channel
             new_task = tasks.loop(**v["run_params"])(self.news_notification)
-            new_task.start(task=new_task, quiet_start=True, **v["news_params"])
+            new_task.start(task=new_task, quiet_start=True, loop_id=k, **v["news_params"])
             tasks_for_guild[k]["task"] = new_task
         self.active_tasks[guild.id] = tasks_for_guild
 
