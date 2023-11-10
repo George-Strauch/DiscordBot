@@ -17,7 +17,6 @@ class NewsFunctions:
             # "category": "business,politics,science,technology,world",
             "country": 'us,au,gb',
             "domain": "npr,bbc,abcnews,nbcnews"
-            # "domain": "abcnews,nbcnews,cnn,npr"
         }
         refine.update(kwargs)
         # arguments = refine.copy()

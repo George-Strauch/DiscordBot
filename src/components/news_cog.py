@@ -1,10 +1,13 @@
 import datetime
 import json
 import asyncio
+from typing import Any
+
 import discord
+from discord._types import ClientT
 from discord.ext import commands, tasks
-from discord import app_commands
-from discord.ui import Select, View
+from discord import app_commands, Interaction
+from discord.ui import Select, View, Button
 from .functions.news import NewsFunctions
 from .functions.warn_notice import get_new_warn_data
 from .utils import log_events, chunk_message, theme_colors
@@ -17,7 +20,8 @@ news_categories = {
     'business', 'crime', 'domestic', 'education', 'entertainment', 'environment', 'food',
     'other', 'politics', 'science', 'sports', 'technology', 'top', 'tourism', 'world', 'health'
 }
-news_categories = {x: x for x in news_categories}.update({"ANY": ""})
+news_categories = {x: x for x in news_categories}
+# news_categories = {x: x for x in news_categories}.update({"ANY": ""})
 
 
 sources = {
@@ -28,10 +32,10 @@ sources = {
     "Yahoo! News": "yahoo",
     "The BBC": "bbc",
     "NBC News": "nbcnews",
-    "ANY": ""
+    "ANY": "x"
 }
 param_descriptions = {
-    "q": "Search of news about a specific query, (Default everything)",
+    "topic": "Search of news about a specific query, (Default everything)",
     "source": "News Source (Default: NPR, BBC, ABC News, NBC News)",
     "category": "Category of news articles (Default: All)",
     "n": "Number of news articles you want to see (Default 5, Max 6)",
@@ -42,9 +46,8 @@ countries = {
     "United Kingdom": "gb",
     "Germany": "de",
     "Australia": "au",
-    "ANY": ""
+    "ANY": "x"
 }
-
 
 news_choices = {
     "sources": [
@@ -68,61 +71,136 @@ news_choices = {
 
 
 
+class AbstractSelect(Select):
+    def __init__(self, data_passer, **kwargs):
+        self.data_passer = data_passer
+        self.default_values = self.default_values if hasattr(self, "default_values") else []
+        self.select_options = self.select_options if hasattr(self, "select_options") else []
+        self.param = self.param if hasattr(self, "param") else "_"
+        params = {
+            "options": self.select_options,
+            "max_values": kwargs.get("max_values", len(self.select_options)),
+            "min_values": kwargs.get("min_values", 1),
+            "placeholder": kwargs.get("placeholder", self.param),
+        }
+        params.update(kwargs)
+        super().__init__(**kwargs)
+        self.set_data()
+
+    async def callback(self, interaction: Interaction[ClientT]) -> Any:
+        self.set_data()
+        await interaction.response.defer()
+
+    def set_data(self):
+        if hasattr(self, "default_values") and len(self.default_values) > 0:
+            self.data_passer({self.param: ",".join(self.default_values)})
+            self.default_values = []
+        else:
+            self.data_passer({self.param: ",".join(self.values)})
+
+
 class CreatePeriodicNewsNotification(View):
-    def __init__(self, original_interaction, notification_creator):
+    class CategorySelect(AbstractSelect):
+        def __init__(self, data_passer):
+            # self.default_values = "business,politics,science,technology,world".split(',')
+            self.default_values = []
+            self.select_options = [
+                discord.SelectOption(label=k.capitalize(), value=v, default=v in self.default_values)
+                for k, v in news_categories.items()
+            ]
+            self.param = "category"
+            super().__init__(
+                options=self.select_options,
+                max_values=len(self.select_options),
+                min_values=1,
+                placeholder="Categories",
+                data_passer=data_passer
+            )
+
+    class SourceSelect(AbstractSelect):
+        def __init__(self, data_passer):
+            # self.default_values = ["npr"]
+            self.default_values = []
+
+            self.select_options = [
+                discord.SelectOption(label=k, value=v, default=v in self.default_values)
+                for k, v in sources.items()
+            ]
+            self.param = "source"
+            super().__init__(
+                options=self.select_options,
+                max_values=len(self.select_options),
+                min_values=1,
+                placeholder="News Source",
+                data_passer=data_passer
+            )
+
+    class CountrySelect(AbstractSelect):
+        def __init__(self, data_passer):
+            self.default_values = []
+            self.select_options = [
+                discord.SelectOption(label=k, value=v, default=v in self.default_values)
+                for k, v in countries.items()
+            ]
+            self.param = "country"
+            super().__init__(
+                options=self.select_options,
+                max_values=len(self.select_options),
+                min_values=1,
+                placeholder="Country",
+                data_passer=data_passer
+            )
+
+
+    class StartNotificationButton(Button):
+        def __init__(self, start_func):
+            super().__init__(label="Start News Notifications", style=discord.ButtonStyle.primary, row=4)
+            self.start_func = start_func
+
+        async def callback(self, interaction: Interaction[ClientT]) -> Any:
+            await self.start_func()
+            await interaction.response.defer()
+
+    class CancelButton(Button):
+        def __init__(self, cancel):
+            super().__init__(label="Cancel", style=discord.ButtonStyle.danger, row=4)
+            self.cancel = cancel
+
+        async def callback(self, interaction: Interaction[ClientT]) -> Any:
+            await self.cancel()
+            await interaction.response.defer()
+
+
+    def __init__(self, original_interaction, original_params, notification_creator):
         super().__init__()
-        self.add_item(CategorySelect(self.category_callback))
-        self.add_item(CategorySelect(self.source_callback))
-        self.add_item(CategorySelect(self.country_callback))
-        # self.add_item(CategorySelect(self.category_callback))
+        self.news_parameters = {}
+        self.run_parameters = {}
+        self.params = original_params
+        self.add_item(self.CategorySelect(self.data_passer))
+        self.add_item(self.SourceSelect(self.data_passer))
+        self.add_item(self.CountrySelect(self.data_passer))
+        self.add_item(self.CancelButton(self.cancel))
+        self.add_item(self.StartNotificationButton(self.start))
+
         self.original_interaction = original_interaction
         self.notification_creator = notification_creator
-        self.parameters = {}
 
+    def data_passer(self, received_data: dict):
+        run_params = ["frequency", "no_news_update"]
+        if any([k in run_params for k in received_data.keys()]):
+            self.params["run_args"].update(received_data)
+        else:
+            self.params["news_args"].update(received_data)
 
-    async def category_callback(self, interaction: discord.Interaction):
-        pass
+    async def start(self):
+        # print(json.dumps(self.params, indent=4))
+        await self.notification_creator(self.original_interaction, self.params)
 
-    async def source_callback(self, interaction: discord.Interaction):
-        pass
-
-    async def country_callback(self, interaction: discord.Interaction):
-        pass
-
-    async def finish_button_callback(self, interaction: discord.Interaction):
-        pass
-
-
-class CategorySelect(Select):
-    def __init__(self, call_back):
-        default = "business,politics,science,technology,world".split(',')
-        options = [discord.SelectOption(label=k.capitalize(), value=v, default=v in default) for k, v in news_categories]
-        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Categories")
-        self.callback = call_back
-    # async def callback(self, interaction: discord.Interaction):
-    #     pass
-
-
-class SourceSelect(Select):
-    def __init__(self, call_back):
-        default = ["npr"]
-        options = [discord.SelectOption(label=k, value=v, default=v in default) for k, v in sources]
-        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Sources")
-        self.callback = call_back
-    # async def callback(self, interaction: discord.Interaction):
-    #     pass
-
-
-class CountrySelect(Select):
-    def __init__(self, call_back):
-        default = []
-        options = [discord.SelectOption(label=k, value=v, default=v in default) for k, v in countries]
-        super().__init__(options=options, max_values=len(options), min_values=1, placeholder="Countries")
-        self.callback = call_back
-    # async def callback(self, interaction: discord.Interaction):
-    #     pass
-
-
+    async def cancel(self):
+        await self.original_interaction.edit_original_response(
+            content="Canceled news notification setup",
+            view=None
+        )
 
 
 class News(commands.Cog):
@@ -146,7 +224,7 @@ class News(commands.Cog):
     async def get_news(
             self,
             interaction: discord.Interaction,
-            q: str = "",
+            topic: str = "",
             n: int = 5,
             source: discord.app_commands.Choice[str] = "",
             category: discord.app_commands.Choice[str] = "",
@@ -157,8 +235,8 @@ class News(commands.Cog):
         """
         kwargs = {}
 
-        if q != "":
-            kwargs["q"] = q
+        if topic != "":
+            kwargs["q"] = topic
         if n != 0:
             kwargs["size"] = min(n, 5)
         if source != "":
@@ -170,74 +248,55 @@ class News(commands.Cog):
 
         log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}", self.log_file)
         await interaction.response.send_message("Working on that, one sec ...")
-        news_articles = self.news_api.get_news(**kwargs)
-        if len(news_articles) == 0:
+        news_response = self.news_api.get_news(**kwargs)
+        if len(news_response) == 0:
             await interaction.edit_original_response(content="No news articles found with the provided query")
         else:
-            embeds = [
-                self.create_article_embed(article=x, color=theme_colors[i])
-                for i, x in enumerate(news_articles)
-            ]
-            await interaction.edit_original_response(embeds=embeds)
+            if isinstance(news_response, str):
+                await interaction.edit_original_response(content="An error occurred getting news articles, sorry")
+            else:
+                embeds = [
+                    self.create_article_embed(article=x, color=theme_colors[i])
+                    for i, x in enumerate(news_response)
+                ]
+                await interaction.edit_original_response(embeds=embeds)
 
-    @app_commands.command(name="set_news_notification")
-    @app_commands.describe(
-        **param_descriptions,
-        hours="time between each notification",
-        no_news_update="Still Send an update if there were no news articles found "
-                       "with the provided query each time interval"
-    )
-    @app_commands.choices(source=news_choices["sources"])
-    @app_commands.choices(category=news_choices["categories"])
-    @app_commands.choices(country=news_choices["countries"])
-    async def start_news_notifications(
-            self,
-            interaction: discord.Interaction,
-            q: str = "",
-            n: int = 5,
-            source: discord.app_commands.Choice[str] = "",
-            category: discord.app_commands.Choice[str] = "",
-            country: discord.app_commands.Choice[str] = "",
-            hours: int = 12,
-            no_news_update: bool = False
-            # start_hour: int = 9
-    ):
-        """
-        sets a news notification task
-        """
-        kwargs = {}
 
-        if q != "":
-            kwargs["q"] = q
-        if n != 0:
-            kwargs["size"] = min(n, 5)
-        if source != "":
-            kwargs["domain"] = source.value
-        if category != "":
-            kwargs["category"] = category.value
-        if country != "":
-            kwargs["country"] = country.value
+    async def create_periodic_notification_loop(self, interaction, params):
+        news_args = {}
+        # run_args = {}
+        if params["news_args"]["topic"] != "":
+            news_args["q"] = params["news_args"]["topic"]
+        if params["news_args"]["size"] != 0:
+            news_args["size"] = min(5, params["news_args"]["size"])
+        if params["news_args"]["source"] != "":
+            news_args["domain"] = params["news_args"]["source"]
+        if params["news_args"]["category"] != "":
+            news_args["category"] = params["news_args"]["category"]
+        if params["news_args"]["country"] != "":
+            news_args["country"] = params["news_args"]["country"]
 
-        kwargs["channel"] = interaction.channel
-        kwargs["no_news_update"] = no_news_update
+        news_args["channel"] = interaction.channel
+        news_args["no_news_update"] = params["news_args"].get("no_news_update", False)
+
         run_args = {
-            "hours": hours,
+            "hours": params["run_args"].get("hours", 24),
         }
-
         new_task = tasks.loop(**run_args)(self.news_notification)
+
         if interaction.guild.id not in self.active_tasks:
             self.active_tasks[interaction.guild.id] = {}
         existing_ids = list(self.active_tasks[interaction.guild.id].keys()) + [0]
-        new_id = max(existing_ids)+1
+        new_id = max(existing_ids) + 1
 
         self.active_tasks[interaction.guild.id][new_id] = {
             "task": new_task,
-            "news_params": kwargs,
+            "news_params": news_args,
             "run_params": run_args,
             "started": str(datetime.datetime.now()).split('.')[0].replace(' ', ': ')[:-3]
             # "no_news_update": no_news_update
         }
-        new_task.start(task=new_task, **kwargs)
+        new_task.start(task=new_task, **news_args)
         self.db.write_news_notification_to_db(
             guild_id=interaction.guild_id,
             notification_id=new_id,
@@ -246,11 +305,44 @@ class News(commands.Cog):
         embed = self.create_news_notification_loop_embed(
             guild_id=interaction.guild.id, _id=new_id, color=theme_colors[0]
         )
-        await interaction.response.send_message(
-            f"Created new news notification loop",
+        await interaction.edit_original_response(
+            content="Created News Notification",
             embed=embed,
+            # ephemeral=True
+        )
+
+
+    @app_commands.command(name="set_news_notification")
+    @app_commands.describe(topic="Topic you want to send news notifications to this channel for. (blank for any)")
+    async def start_news_notifications(
+            self,
+            interaction: discord.Interaction,
+            topic: str = "",
+    ):
+        """
+        opens a menu to set up news notifications about a provided topic
+        """
+        params = {
+            "news_args": {
+                "size": 5,
+                "topic": topic
+            },
+            "run_args": {
+                "hours": 24
+            }
+        }
+        view = CreatePeriodicNewsNotification(
+            original_interaction=interaction,
+            original_params=params,
+            notification_creator=self.create_periodic_notification_loop
+        )
+        await interaction.response.send_message(
+            content="Select categories, sources, countries",
+            view=view,
             ephemeral=True
         )
+        return
+
 
     @app_commands.command(name="get_news_notifications")
     async def get_news_notifications(self, interaction: discord.Interaction,):
@@ -377,6 +469,7 @@ class News(commands.Cog):
 
     def create_article_embed(self, article: dict, color=theme_colors[0]):
         wsp = "\u200b\t"
+        print(article)
         e = discord.Embed(
             title=article["Title"],
             url=article["Link"],
