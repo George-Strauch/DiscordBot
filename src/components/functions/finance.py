@@ -66,7 +66,6 @@ class TickerInfo:
             return {"error": "There was an issues with the query"}
 
 
-
     def get_plt(self, tickers):
         # todo reverse then invert
         fig, ax = plt.subplots(figsize=(4.1/3, 1/3), dpi=300)
@@ -76,6 +75,10 @@ class TickerInfo:
             norm = prices[-1]
             prices = [x/norm for x in prices]
             ax.plot(prices, linewidth=.5, color=tdata["color"])
+
+            base = [1]*len(prices)
+            ax.plot(base, linewidth=.1, color="#ffffff", alpha=0.2)
+
         ax.axis('off')
         return fig
 
@@ -87,10 +90,3 @@ if __name__ == '__main__':
     for t, v in a.items():
         print(t)
         print(v["embed_str"])
-
-    # print(json.dumps(a, indent=4))
-
-
-    # f = ti.get_plt(a)
-    # f.show()
-    # print(a)

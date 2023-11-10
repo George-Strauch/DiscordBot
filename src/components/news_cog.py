@@ -186,7 +186,7 @@ class CreatePeriodicNewsNotification(View):
         self.notification_creator = notification_creator
 
     def data_passer(self, received_data: dict):
-        run_params = ["frequency", "no_news_update"]
+        run_params = ["frequency", "empty_update"]
         if any([k in run_params for k in received_data.keys()]):
             self.params["run_args"].update(received_data)
         else:
@@ -277,7 +277,7 @@ class News(commands.Cog):
             news_args["country"] = params["news_args"]["country"]
 
         news_args["channel"] = interaction.channel
-        news_args["no_news_update"] = params["news_args"].get("no_news_update", False)
+        news_args["empty_update"] = params["news_args"].get("empty_update", False)
 
         run_args = {
             "hours": params["run_args"].get("hours", 24),
@@ -294,7 +294,6 @@ class News(commands.Cog):
             "news_params": news_args,
             "run_params": run_args,
             "started": str(datetime.datetime.now()).split('.')[0].replace(' ', ': ')[:-3]
-            # "no_news_update": no_news_update
         }
         new_task.start(task=new_task, **news_args)
         self.db.write_news_notification_to_db(
@@ -312,12 +311,24 @@ class News(commands.Cog):
         )
 
 
-    @app_commands.command(name="set_news_notification")
-    @app_commands.describe(topic="Topic you want to send news notifications to this channel for. (blank for any)")
+    @app_commands.command(
+        name="create_news_notification"
+    )
+    @app_commands.describe(
+        topic="Topic you want to send news notifications to this channel for"
+    )
+    @app_commands.describe(
+        frequency="Hours between each notification event [12, 24 or 48] [Default 24]"
+    )
+    @app_commands.describe(
+        empty_update="Receive notification if no news articles are found matching your criteria each event"
+    )
     async def start_news_notifications(
             self,
             interaction: discord.Interaction,
             topic: str = "",
+            frequency: int = 24,
+            empty_update: bool = False
     ):
         """
         opens a menu to set up news notifications about a provided topic
@@ -328,7 +339,8 @@ class News(commands.Cog):
                 "topic": topic
             },
             "run_args": {
-                "hours": 24
+                "hours": frequency if frequency in [12, 24, 48] else 24  # todo enumerate parameter
+
             }
         }
         view = CreatePeriodicNewsNotification(
@@ -342,7 +354,6 @@ class News(commands.Cog):
             ephemeral=True
         )
         return
-
 
     @app_commands.command(name="get_news_notifications")
     async def get_news_notifications(self, interaction: discord.Interaction,):
@@ -388,7 +399,7 @@ class News(commands.Cog):
             )
 
 
-    async def news_notification(self, channel, no_news_update, quiet_start=False, task=None, loop_id=None, **kwargs):
+    async def news_notification(self, channel, empty_update=False, quiet_start=False, task=None, loop_id=None, **kwargs):
         """
         Sends news notifications in a provided time interval
         """
@@ -420,7 +431,7 @@ class News(commands.Cog):
                 # todo, make sure this resets the thing
                 task.restart(
                     channel=channel,
-                    no_news_update=no_news_update,
+                    empty_update=empty_update,
                     task=task,
                     quiet_start=False,
                     loop_id=loop_id,
@@ -432,7 +443,7 @@ class News(commands.Cog):
         log_events("news task sending news sending news", self.log_file)
         news_articles = self.news_api.get_news(**kwargs)
         if len(news_articles) == 0:
-            if no_news_update or (task and task.current_loop == 0):
+            if empty_update or (task and task.current_loop == 0):
                 await channel.send(content="No news articles found with the provided query")
         else:
             embeds = [
@@ -446,29 +457,35 @@ class News(commands.Cog):
         if _id not in self.active_tasks[guild_id]:
             return None
         x = self.active_tasks[guild_id][_id]
-        str_adjust = 18
-        desc = [
-            f"{str(k).ljust(str_adjust, ' ')}{str(v if v != '' else 'ANY').ljust(str_adjust, ' ')}"
-            for k, v in x["news_params"].items() if k != 'channel'
-        ]
-        desc = desc + [
-            f"{str(k).ljust(str_adjust, ' ')}{str(v).ljust(str_adjust, ' ')}"
-            for k, v in x["run_params"].items()
-        ]
-        desc = desc + [f"{'started'.ljust(str_adjust, ' ')}{x['started'].ljust(str_adjust, ' ')}"]
-        desc = desc + [f"{'channel'.ljust(str_adjust, ' ')}{x['news_params']['channel'].name.ljust(str_adjust, ' ')}"]
 
-        desc = "\n".join(desc)
-        desc = f"``{desc}``"
-        return discord.Embed(
+        # todo: field map
+        desc = {
+            k: v
+            for k, v in x["news_params"].items() if k != 'channel'
+        }
+        desc.update({
+            k: v
+            for k, v in x["run_params"].items()
+        })
+        desc["started"] = x['started']
+        desc["channel"] = x['news_params']['channel'].name
+
+        e = discord.Embed(
             title=f"id:\t{_id}",
-            description=desc,
             color=int(color.replace("#", ""), base=16)
         )
 
+        for i, (k, v) in enumerate(desc.items()):
+            e.insert_field_at(
+                index=i,
+                name=k,
+                value=f"```{v}```",
+                inline=len(str(v)) < 14
+            )
+        return e
+
 
     def create_article_embed(self, article: dict, color=theme_colors[0]):
-        wsp = "\u200b\t"
         print(article)
         e = discord.Embed(
             title=article["Title"],
@@ -477,11 +494,7 @@ class News(commands.Cog):
             color=int(color.replace("#", ""), base=16),
             type="article"
         )
-
-        # e.set_footer(text=f"{wsp*20} Source: News")
         e.set_footer(text=article["footer"])
-
-
         if "img_url" in article and article["img_url"] not in ["", None]:
             print(f"setting url: {article['img_url']}")
             e.set_thumbnail(url=article["img_url"])
@@ -501,6 +514,7 @@ class News(commands.Cog):
                 print("cannot find channel")
                 return
             tasks_for_guild[k]["news_params"]["channel"] = channel
+            # todo verify parameters
             new_task = tasks.loop(**v["run_params"])(self.news_notification)
             new_task.start(task=new_task, quiet_start=True, loop_id=k, **v["news_params"])
             tasks_for_guild[k]["task"] = new_task
