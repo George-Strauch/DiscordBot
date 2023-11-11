@@ -1,3 +1,3 @@
-sh kill.sh
+bash kill.sh
 sleep 1
-sh start.sh
+bash start.sh

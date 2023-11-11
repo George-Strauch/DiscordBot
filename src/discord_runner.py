@@ -8,7 +8,6 @@ from components.news_cog import News
 from components.trends_cog import Trends
 from components.finance_cog import Finance
 from components.interactions_cog import Interactions
-# from components.task_cogs import NewsTask
 from components.admins_cog import AdminActions
 
 
@@ -32,7 +31,7 @@ class BasedClient(commands.Bot):
         self.bot_channel = []
         self.news_channels = []
         self.creds = kwargs["creds"]
-        self.log_file = "data/discord_runner.log"
+        self.log_file = "/opt/bot/data/discord_runner.log"
 
     async def on_ready(self):
         """
@@ -86,11 +85,8 @@ class BasedClient(commands.Bot):
 
 
 if __name__ == '__main__':
-    cred_file = "/home/george/Documents/dev-creds.json"
+    cred_file = "/opt/bot/data/creds.json"
     CREDS = read_file(cred_file)
-
-    # cred_file = "data/creds.json"
-    # CREDS = read_file(cred_file)
 
     newbot = BasedClient(creds=CREDS)
     newbot.run(CREDS["DISCORD_TOKEN"])

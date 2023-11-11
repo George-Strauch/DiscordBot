@@ -10,7 +10,7 @@ from .utils import log_events, chunk_message, news_choices
 class NewsTask(commands.Cog):
     def __init__(self, bot: commands.Bot, api_key: str = "", start_hour: int = 1):
         self.bot = bot
-        self.log_file = "data/news.log"
+        self.log_file = "/opt/bot/data/news.log"
         self.news_api = NewsFunctions(api_key)
 
         # TODO: load this from data base

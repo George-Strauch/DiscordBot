@@ -64,7 +64,7 @@ class RoleSelectDD(Select):
 class Interactions(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.log_file = "data/interactions.log"
+        self.log_file = "/opt/bot/data/interactions.log"
 
 
     @app_commands.command(name="invite")

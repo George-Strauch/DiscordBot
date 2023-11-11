@@ -5,7 +5,7 @@ import yfinance as yf
 
 class TickerInfo:
     def __init__(self):
-        self.log_file = "data/ticker.log"
+        self.log_file = "/opt/bot/data/ticker.log"
 
 
     def get_raw_ticker_data(self, tickers, period="1mo"):

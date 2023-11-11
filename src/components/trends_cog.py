@@ -8,7 +8,7 @@ from .utils import log_events, chunk_message
 class Trends(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.log_file = "data/trending.log"
+        self.log_file = "/opt/bot/data/trending.log"
         self.trends_searcher = None
 
     @app_commands.command(name="trending")

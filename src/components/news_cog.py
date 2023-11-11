@@ -206,10 +206,10 @@ class CreatePeriodicNewsNotification(View):
 class News(commands.Cog):
     def __init__(self, bot: commands.Bot, api_key: str = "", guilds=[]):
         self.bot = bot
-        self.log_file = "data/news.log"
+        self.log_file = "/opt/bot/data/news.log"
         self.news_api = NewsFunctions(api_key)
         self.active_tasks = {}
-        self.db = NewsNotificationDatabase("data/news_notification.db")
+        self.db = NewsNotificationDatabase("/opt/bot/data/news_notification.db")
         print("loading tasks from db")
         for g in guilds:
             self.load_from_db(g)

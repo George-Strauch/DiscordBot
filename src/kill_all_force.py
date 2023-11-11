@@ -4,7 +4,7 @@ Kills any processes that have been orphaned
 """
 if __name__ == '__main__':
     # write the system processes for discord_runner.py to a file
-    ps_file = "data/processes.txt"
+    ps_file = "/opt/bot/data/processes.txt"
     os.system(f"ps -ef | grep discord_runner.py > {ps_file}")
     with open(ps_file, 'r') as fp:
         lines = fp.readlines()

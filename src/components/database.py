@@ -95,7 +95,7 @@ class NewsNotificationDatabase:
 
 
 if __name__ == '__main__':
-    d = NewsNotificationDatabase("/home/george/PycharmProjects/discord_bot/src/data/news_notification.db")
+    d = NewsNotificationDatabase("/opt/bot/data/news_notification.db")
     # a = '''{"1165720764486537266": {"1": {'task': "", 'news_params': {'q': 'cs2', 'size': 1, 'domain': '', 'category': '', 'channel': "", 'no_news_update': false}, 'run_params': {'hours': 12}, 'started': '2023-11-05: 15:17'}, "2": {'task': "", 'news_params': {'q': 'war', 'size': 1, 'domain': '', 'category': '', 'channel': "", 'no_news_update': false}, 'run_params': {'hours': 12}, 'started': '2023-11-05: 15:19'}}}'''.replace("'", '"')
     # print(a)
     # a = json.loads(a)

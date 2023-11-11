@@ -8,7 +8,7 @@ from .utils import log_events, chunk_message
 class AI(commands.Cog):
     def __init__(self, bot: commands.Bot, api_key: str=""):
         self.bot = bot
-        self.log_file = "data/ai.log"
+        self.log_file = "/opt/bot/data/ai.log"
         self.open_ai = OpenAIwrapper(api_key)
 
     @app_commands.command(name="gpt", description="use chat GPT")

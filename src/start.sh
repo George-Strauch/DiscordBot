@@ -1,6 +1,6 @@
-LOG_FILE="data/log.txt"
+LOG_FILE="/opt/bot/data/log.txt"
 START_SCRIPT="discord_runner.py"
-PID_FILE="data/pid.txt"
+PID_FILE="/opt/bot/data/pid.txt"
 mkdir -p data
 source ../venv/bin/activate
 nohup python  $START_SCRIPT> $LOG_FILE 2>&1 &

@@ -14,7 +14,7 @@ import io
 class Finance(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.log_file = "data/finance.log"
+        self.log_file = "/opt/bot/data/finance.log"
         self.ticker_info = TickerInfo()
         # periods = ["1d" "5d", "1mo", "3mo", "6mo", "5y", "ytd", "max"]
 

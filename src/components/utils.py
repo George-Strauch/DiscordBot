@@ -10,7 +10,7 @@ import discord
 
 
 theme_colors = [
-    "#A7D2CB", "#F2D388", "#C98474", "#30475E",
+    "#c9e6f2", "#F2D388", "#C98474", "#30475E",
     "#F1935C", "#BA6B57", "#E7B2A5", "#874C62",
 ]
 # theme_colors = [int(x.replace("#", ""), base=16) for x in theme_colors]
