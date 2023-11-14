@@ -77,7 +77,7 @@ class TickerInfo:
             ax.plot(prices, linewidth=.5, color=tdata["color"])
 
             base = [1]*len(prices)
-            ax.plot(base, linewidth=.1, color="#ffffff", alpha=0.2)
+            ax.plot(base, linewidth=.1, color="#000000", alpha=0.2)
 
         ax.axis('off')
         return fig

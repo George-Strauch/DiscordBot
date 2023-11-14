@@ -1,3 +1,5 @@
+import json
+
 import openai
 
 
@@ -27,6 +29,7 @@ class OpenAIwrapper:
                 model=model, messages=message
             )
             reply = chat.choices[0].message.content
+            print(reply)
             return reply
         except openai.error.InvalidRequestError:
             return "OpenAI rejected the prompt"
@@ -43,3 +46,104 @@ class OpenAIwrapper:
             # todo download image and send as a file
         except openai.error.InvalidRequestError:
             return "OpenAI rejected the prompt"
+
+
+    def function_caller(self, _input, tools, model="gpt-4"):
+        # "gpt-3.5-turbo-0613"
+        try:
+            model = "gpt-3.5-turbo-0613"
+            message = self.context + [{"role": "user", "content": _input}]
+            chat = openai.ChatCompletion.create(
+                model=model,
+                messages=message,
+                tools=tools
+            )
+            print(chat)
+            choice = chat.choices[0]
+            if "tool_calls" in choice.message:
+                reply = chat.choices[0].message.tool_calls
+                func = reply[0]["function"]
+                func["arguments"] = json.loads(func["arguments"])
+                return True, func
+            else:
+                reply = choice.message.content
+                return False, reply
+        except Exception as ire:
+            print("issues")
+            print(ire.args)
+            return False, "OpenAI rejected the prompt"
+
+
+if __name__ == '__main__':
+
+    def function_definer(name, desc, params, required):
+        return {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": desc,
+                "parameters": {
+                    "type": "object",
+                    "properties": params,
+                    "required": required
+                },
+            },
+        }
+
+    tools = [
+        function_definer(
+            name="ticker",
+            desc="function to display information on upto 5 stock ticker symbols",
+            params={
+                "tickers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "description":  "Stock ticker symbol. Tickers for indexes should be prefixed with '^'"
+                                        " for example, the dow jones would be: ^DJI, and the S&P 500 would be: ^SPX",
+                    },
+                    "description": "List of stock ticker symbols up to 5. Index symbols should be prefixed with '^'"
+                                   " for example, the dow jones: would be ^DJI or the S&P 500 would be ^SPX",
+                }
+            },
+            required=["tickers"]
+        ),
+
+        function_definer(
+            name="news",
+            desc="Provides news articles",
+            params={
+                "topic": {
+                    "type": "string",
+                    "description": "Topic of what you want to see news articles about. If this parameter is not provided, "
+                                   "then the articles will be just general news",
+                },
+                "n": {
+                    "type": "integer",
+                    "description": "number of news articles that are wanted. this does not need to be provided and will be "
+                                   "5 be default",
+                }
+            },
+            required=[]
+        ),
+
+        function_definer(
+            name="default_response",
+            desc="If no function calls for the provided query can be found or the expected output of the request is a natural language response, this should be called to display"
+                 " that to the user. This should also be used to explain if there were issues with the request such as"
+                 " if they requested to provide invalid parameters to another known function",
+            params={
+                "text": {
+                    "type": "string",
+                    "description": "natural language output text that is provided to the user",
+                }
+            },
+            required=["text"]
+        ),
+    ]
+
+
+    ai = OpenAIwrapper("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")
+    valid, call = ai.function_caller(_input="do the hookie pookie", tools=tools)
+    print(valid)
+    print(json.dumps(call, indent=4))

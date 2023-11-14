@@ -9,6 +9,8 @@ from components.trends_cog import Trends
 from components.finance_cog import Finance
 from components.interactions_cog import Interactions
 from components.admins_cog import AdminActions
+from components.ada_cog import AdaNlp
+
 
 
 class BasedClient(commands.Bot):
@@ -33,12 +35,17 @@ class BasedClient(commands.Bot):
         self.creds = kwargs["creds"]
         self.log_file = "/opt/bot/data/discord_runner.log"
 
+
     async def on_ready(self):
         """
         called when the bot is initialized
         """
         try:
             await self.load_cogs()
+            # print("syncing")
+            # x = await self.tree.sync()
+            # print("back")
+            # print(x)
         except Exception as e:
             print(traceback.format_exc())
             log_events("exception occurred while syncing commands", self.log_file)
@@ -60,13 +67,7 @@ class BasedClient(commands.Bot):
     async def load_guild_info(self):
         for guild in self.guilds:
             print(f"Found guild {guild.name}")
-            # for channel in guild.channels:
-            #     if channel.name.upper() == "BOT-ROOM":
-            #         events.append(f"Found bot room in {guild.name}")
-            #         bot_channels.append(channel)
-            #     if channel.name.upper() == "NEWS":
-            #         events.append(f"news room in {guild.name}")
-            #         news_channels.append(channel)
+
 
 
     async def load_cogs(self):
@@ -76,11 +77,17 @@ class BasedClient(commands.Bot):
         await self.add_cog(Trends(self))
         await self.add_cog(Finance(self))
         await self.add_cog(Interactions(self))
+        await self.add_cog(AdaNlp(
+            self,
+            news_api_key=self.creds["NEWSDATAIO_TOKEN"],
+            ai_api_key=self.creds["OPENAI_TOKEN"])
+        )
         # await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
         await self.add_cog(AdminActions(self))
         synced = await self.tree.sync()
         print(f"Synced {len(synced)} command(s).")
         print(synced)
+
 
 
 

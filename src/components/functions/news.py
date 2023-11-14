@@ -33,7 +33,6 @@ class NewsFunctions:
             return {"error": errors}
 
     def get_news(self, **kwargs):
-
         n = self.get_news_raw(**kwargs)
         if "error" in n.keys():
             return f"An error occurred getting news: {n['error']}"
