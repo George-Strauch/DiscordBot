@@ -1,5 +1,4 @@
 import json
-
 from newsdataapi import NewsDataApiClient
 # https://rapidapi.com/newslit/api/newslit-news-search/details # todo
 

@@ -52,32 +52,10 @@ class RoleSelectDD(Select):
 
 
 
-# class RoleSelectDDView(View):
-#     def __init__(self, guild):
-#         super().__init__()
-#         print("here in create")
-#         self.add_item(RoleSelectDD(guild))
-#         print("done creating")
-
-
-
 class Interactions(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.log_file = "/opt/bot/data/interactions.log"
-
-
-    @app_commands.command(name="invite")
-    async def generate_invite_link(self, interaction: discord.Interaction):
-        """
-        generate an invite link
-        """
-        invite_link = await interaction.channel.create_invite(max_age=0)
-        await interaction.response.send_message(
-            invite_link,
-            ephemeral=True
-        )
-
 
 
     @app_commands.command(name="roles")

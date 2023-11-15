@@ -6,6 +6,7 @@ from discord.ui import Select, View
 from .functions.ai import OpenAIwrapper
 from .discord_bll.finance_bll import FinanceBll
 from .discord_bll.news_bll import NewsBll
+from .discord_bll.misc_bll import MiscBll
 
 
 def function_definer(name, desc, params, required):
@@ -60,28 +61,24 @@ tools = [
         required=[]
     ),
 
-    # function_definer(
-    #     name="text_response",
-    #     desc="If no function calls for the provided query can be found or the expected output of the request is a natural language response, this should be called to display"
-    #          " that to the user. This should also be used to explain if there were issues with the request such as"
-    #          " if they requested to provide invalid parameters to another known function",
-    #     params={
-    #         "text": {
-    #             "type": "string",
-    #             "description": "natural language output text that is provided to the user",
-    #         }
-    #     },
-    #     required=["text"]
-    # ),
+    function_definer(
+        name="invite",
+        desc="Generates an invitation link to the server",
+        params={},
+        required=[]
+    ),
+
 ]
 
 
 class AdaNlp(commands.Cog):
     def __init__(self, bot: commands.Bot, ai_api_key: str="",  news_api_key: str=""):
+        print("loading ada cog")
         self.bot = bot
         self.log_file = "/opt/bot/data/ada.log"
         self.open_ai = OpenAIwrapper(ai_api_key)
         self.news = NewsBll(news_api_key)
+        self.misc = MiscBll()
         self.finance = FinanceBll()
         self.function_map = {
             "news": self.ada_news,
@@ -91,7 +88,9 @@ class AdaNlp(commands.Cog):
             "generate_invite_link": self.ada_link_gen,
             "ticker": self.ada_ticker,
             "trending": self.ada_get_trending,
-            "assign_roles": self.ada_assign_roles
+            "assign_roles": self.ada_assign_roles,
+            "invite": self.ada_link_gen,
+
         }
         self.placeholder_delete = ["news", "text_response", "ticker"]
 
@@ -111,7 +110,7 @@ class AdaNlp(commands.Cog):
         print(f"interaction is {type(ctx)}")
         await ctx.defer()
         try:
-            valid, output = self.open_ai.function_caller(
+            valid, output = await self.open_ai.function_caller(
                 _input=prompt,
                 tools=tools,
             )
@@ -127,7 +126,7 @@ class AdaNlp(commands.Cog):
                     output = {
                         "name": "text_response",
                         "arguments": {
-                            "text": f"``{output}``"
+                            "text": f"```{output}```"
                         }
                     }
             await self.call_function(
@@ -156,11 +155,15 @@ class AdaNlp(commands.Cog):
         await ctx.reply(text)
 
 
+    async def ada_ticker(self, ctx, **kwargs):
+        # tickers = kwargs["tickers"].split(" ")
+        data = self.finance.get_ticker_info(
+            tickers=kwargs["tickers"],
+            # period=kwargs.get("period", )
+        )
+        await ctx.reply(**data)
 
     async def ada_image_gen(self):
-        pass
-
-    async def ada_ticker(self):
         pass
 
     async def ada_news(self):
@@ -175,8 +178,15 @@ class AdaNlp(commands.Cog):
     async def ada_get_trending(self):
         pass
 
-    async def ada_link_gen(self):
-        pass
+    async def ada_link_gen(self, ctx):
+        try:
+            response = await self.misc.generate_invite_link(ctx.channel)
+            await ctx.reply(
+                **response
+            )
+        except Exception as ex:
+            # todo log
+            print(ex.args)
 
     async def ada_assign_roles(self):
         pass

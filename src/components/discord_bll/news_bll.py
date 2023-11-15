@@ -159,6 +159,7 @@ class CreatePeriodicNewsNotification(View):
             self.start_func = start_func
 
         async def callback(self, interaction: Interaction[ClientT]) -> Any:
+            # await self.
             await self.start_func()
             await interaction.response.defer()
 
@@ -172,7 +173,7 @@ class CreatePeriodicNewsNotification(View):
             await interaction.response.defer()
 
 
-    def __init__(self, channel, original_interaction, original_params, notification_creator):
+    def __init__(self, channel, ctx, original_params, notification_creator, clear_view):
         super().__init__()
         self.news_parameters = {}
         self.run_parameters = {}
@@ -185,7 +186,8 @@ class CreatePeriodicNewsNotification(View):
 
         self.notification_creator = notification_creator
         self.channel = channel
-        self.interaction = original_interaction
+        self.ctx = ctx
+        self.clear_view = clear_view
 
     def data_passer(self, received_data: dict):
         run_params = ["frequency", "empty_update"]
@@ -199,16 +201,18 @@ class CreatePeriodicNewsNotification(View):
             self.channel,
             self.params
         )
-        await self.interaction.edit_original_response(
+        await self.clear_view()
+        await self.ctx.reply(
             view=None,
-            content="News notification has been set up.\nUse /get_news_notifications to view active notifications"
+            content="News notification has been set up.\nUse /notifications to view active notifications",
+            ephemeral=True
         )
 
-
     async def cancel(self):
-        await self.interaction.edit_original_response(
-            view=None,
-            content="Canceled news notification setup"
+        await self.clear_view()
+        await self.ctx.reply(
+            content="Canceled news notification setup",
+            ephemeral=True
         )
 
 
@@ -316,7 +320,8 @@ class NewsBll:
 
     def start_news_notification_with_view(
             self,
-            interaction,
+            ctx,
+            clear_view,
             channel,
             topic: str = "",
             frequency: int = 24,
@@ -340,13 +345,14 @@ class NewsBll:
         view = CreatePeriodicNewsNotification(
             channel=channel,
             original_params=params,
-            original_interaction=interaction,
-            notification_creator=self._create_periodic_notification_loop
+            ctx=ctx,
+            notification_creator=self._create_periodic_notification_loop,
+            clear_view=clear_view
         )
         return {
             "content": "Select categories, sources, countries",
             "view": view,
-            # "ephemeral": True
+            "ephemeral": True
         }
 
 
@@ -361,7 +367,8 @@ class NewsBll:
                 self._create_news_notification_loop_embed(
                     guild_id=guild_id,
                     _id=x,
-                    color=theme_colors[i % len(theme_colors)])
+                    color=theme_colors[i % len(theme_colors)]
+                )
                 for i, x in enumerate(self.task_manager.news_notifications[guild_id])
             ]
             return {
@@ -408,16 +415,15 @@ class NewsBll:
         this method is the task object definition for each news notification runner
         Sends news notifications in a provided time interval
         """
-        print(f"args: {kwargs}")
-        print("loop iteration: ", task.current_loop)
-        print(f"next occurring at {task.next_iteration}")
+        # print(f"args: {kwargs}")
+        # print("loop iteration: ", task.current_loop)
+        # print(f"next occurring at {task.next_iteration}")
         if quiet_start and task:
             if task.current_loop == 0:
 
                 # loop_data = self.task_manager.news_notifications[channel.guild.id][loop_id]
                 t = started.split(": ")[1].split(":")
                 now = dt.now()
-                print(f"now = {now}")
                 start = dt(
                     year=now.year,
                     month=now.month,
@@ -427,7 +433,6 @@ class NewsBll:
                     second=0
                 )
                 start = start - tdelta(days=1)
-                print(hours)
                 while now > start:
                     start = start + tdelta(hours=hours)
                 seconds = start - now
@@ -519,15 +524,8 @@ class NewsBll:
             if not channel:
                 print("cannot find channel")
                 continue
-            print(f"this channel is {channel}")
-            print(channel.guild.id)
             tasks_for_guild[k]["news_params"]["channel"] = channel
-
-            print(0)
-            print(v)
             new_task = tasks.loop(**v["run_params"])(self._news_notification)
-            print(1)
-
             new_task.start(
                 hours=v["run_params"]["hours"],
                 started=v["started"],

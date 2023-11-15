@@ -10,7 +10,7 @@ from components.finance_cog import Finance
 from components.interactions_cog import Interactions
 from components.admins_cog import AdminActions
 from components.ada_cog import AdaNlp
-
+from components.misc_cog import Misc
 
 
 class BasedClient(commands.Bot):
@@ -42,15 +42,11 @@ class BasedClient(commands.Bot):
         """
         try:
             await self.load_cogs()
-            # print("syncing")
-            # x = await self.tree.sync()
-            # print("back")
-            # print(x)
         except Exception as e:
             print(traceback.format_exc())
             log_events("exception occurred while syncing commands", self.log_file)
         events = [f'Logged on as {self.user}!']
-        log_events(events, self.log_file )
+        log_events(events, self.log_file)
 
 
     async def on_message(self, message):
@@ -69,14 +65,13 @@ class BasedClient(commands.Bot):
             print(f"Found guild {guild.name}")
 
 
-
     async def load_cogs(self):
         print("Loading Cogs")
         await self.add_cog(AI(self, api_key=self.creds["OPENAI_TOKEN"]))
         await self.add_cog(News(self, api_key=self.creds["NEWSDATAIO_TOKEN"], guilds=self.guilds))
         await self.add_cog(Trends(self))
         await self.add_cog(Finance(self))
-        await self.add_cog(Interactions(self))
+        # await self.add_cog(Interactions(self))
         await self.add_cog(AdaNlp(
             self,
             news_api_key=self.creds["NEWSDATAIO_TOKEN"],
@@ -84,17 +79,13 @@ class BasedClient(commands.Bot):
         )
         # await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
         await self.add_cog(AdminActions(self))
-        synced = await self.tree.sync()
-        print(f"Synced {len(synced)} command(s).")
-        print(synced)
-
+        await self.add_cog(Misc(self))
 
 
 
 if __name__ == '__main__':
     cred_file = "/opt/bot/data/creds.json"
     CREDS = read_file(cred_file)
-
     newbot = BasedClient(creds=CREDS)
     newbot.run(CREDS["DISCORD_TOKEN"])
 

@@ -3,6 +3,7 @@
 
 class TaskManager:
     _self = None
+    news_notifications = {}
 
     def __new__(cls):
         if cls._self is None:
@@ -10,7 +11,7 @@ class TaskManager:
         return cls._self
 
     def __init__(self):
-        self.news_notifications = {}
+        pass
 
     def get_news_notifications(self):
         pass
