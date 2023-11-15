@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands, Interaction
-from src.components.discord_bll.misc_bll import MiscBll
+from .discord_bll.misc_bll import MiscBll
 
 
 
