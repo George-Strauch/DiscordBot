@@ -1,12 +1,15 @@
+import asyncio
+import json
 import traceback
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import Select, View
+from .utils import log_events
 from .functions.ai import OpenAIwrapper
 from .discord_bll.finance_bll import FinanceBll
 from .discord_bll.news_bll import NewsBll
 from .discord_bll.misc_bll import MiscBll
+from .utils import chunk_message
 
 
 def function_definer(name, desc, params, required):
@@ -68,6 +71,33 @@ tools = [
         required=[]
     ),
 
+    function_definer(
+        name="generate_image",
+        desc="Generates an image given a simple prompt",
+        params={
+            "prompt": {
+                "type": "string",
+                "description": "a description of the image to be generated",
+            }
+        },
+        required=["prompt"]
+    ),
+
+    function_definer(
+        name="news_summery",
+        desc="a summery of the current news. this method will get a list of news articles, about a certain topic " 
+             "if the parameter 'topic' is provided, then ask a LLM to summarize the news articles once it has that "
+             "list. This should only be called instead of the 'news' function if confident the user wants a summery "
+             "instead of the news articles themselves, if unsure, then the default behavior should be to just "
+             "get 'news'",
+        params={
+            "topic": {
+                "type": "string",
+                "description": "topic of the news coverage if any",
+            }
+        },
+        required=["prompt"]
+    ),
 ]
 
 
@@ -77,9 +107,9 @@ class AdaNlp(commands.Cog):
         self.bot = bot
         self.log_file = "/opt/bot/data/ada.log"
         self.open_ai = OpenAIwrapper(ai_api_key)
-        self.news = NewsBll(news_api_key)
-        self.misc = MiscBll()
-        self.finance = FinanceBll()
+        self.news_bll = NewsBll(news_api_key)
+        self.misc_bll = MiscBll()
+        self.finance_bll = FinanceBll()
         self.function_map = {
             "news": self.ada_news,
             "get_news_notifications": self.ada_get_news_updates,
@@ -90,7 +120,8 @@ class AdaNlp(commands.Cog):
             "trending": self.ada_get_trending,
             "assign_roles": self.ada_assign_roles,
             "invite": self.ada_link_gen,
-
+            "generate_image": self.ada_image_gen,
+            "news_summery": self.ada_news_summery
         }
         self.placeholder_delete = ["news", "text_response", "ticker"]
 
@@ -107,7 +138,6 @@ class AdaNlp(commands.Cog):
             prompt: str,
     ):
         print(f"prompt is {prompt}")
-        print(f"interaction is {type(ctx)}")
         await ctx.defer()
         try:
             valid, output = await self.open_ai.function_caller(
@@ -132,6 +162,7 @@ class AdaNlp(commands.Cog):
             await self.call_function(
                 call=output,
                 ctx=ctx,
+                original_prompt=prompt
             )
         except Exception as e:
             print(e.args)
@@ -140,10 +171,11 @@ class AdaNlp(commands.Cog):
             await ctx.reply(content=message)
 
 
-    async def call_function(self, call, ctx):
+    async def call_function(self, call, ctx, original_prompt):
         name = call["name"].split(".")[0]
         params = call["arguments"]
         params["ctx"] = ctx
+        params["original_prompt"] = original_prompt
         func = self.function_map[name]
         print(f"name: {name}")
         print(f"params: {params}")
@@ -157,30 +189,97 @@ class AdaNlp(commands.Cog):
 
     async def ada_ticker(self, ctx, **kwargs):
         # tickers = kwargs["tickers"].split(" ")
-        data = self.finance.get_ticker_info(
+        data = self.finance_bll.get_ticker_info(
             tickers=kwargs["tickers"],
             # period=kwargs.get("period", )
         )
         await ctx.reply(**data)
 
-    async def ada_image_gen(self):
-        pass
 
-    async def ada_news(self):
-        pass
-
-    async def ada_set_news_update(self):
-        pass
-
-    async def ada_get_news_updates(self):
-        pass
-
-    async def ada_get_trending(self):
-        pass
-
-    async def ada_link_gen(self, ctx):
+    async def ada_image_gen(self, ctx, prompt, **kwargs):
         try:
-            response = await self.misc.generate_invite_link(ctx.channel)
+            reply = self.open_ai.image_generator(prompt)
+            await ctx.reply(content=reply)
+        except Exception as ex:
+            await ctx.reply(content="OpenAI rejected the prompt")
+
+
+    async def ada_news(
+            self,
+            ctx,
+            topic="",
+            n=5,
+            source="",
+            category="",
+            country="us,au,gb",
+            **kwargs
+    ):
+        try:
+            response = self.news_bll.get_news(
+                topic=topic,
+                n=n,
+                source=source,
+                category=category,
+                country=country
+            )
+            await ctx.reply(**response)
+        except Exception as e:
+            await ctx.reply(content="Something went wrong getting news :[")
+            log_events(str(e.args), self.log_file)
+
+
+    async def ada_news_summery(self, ctx, topic="", original_prompt="", **kwargs):
+        news_articles = self.news_bll.get_full_raw_news(
+            topic=topic,
+        )
+        if len(news_articles) == 0:
+            await ctx.reply(f"Ada cannot find any news articles about {topic} :[")
+            return
+        news_content = [
+            {
+                # "title": x["title"],
+                # "content": x["content"].replace(r"\u2014", "-").replace(r"\u2019", "'")[:500]+"..."
+                "content": x["content"].replace(r"\u2014", "-").replace(r"\u2019", "'")
+                if x["content"] is not None else x["description"].replace(r"\u2014", "-").replace(r"\u2019", "'")
+            }
+            for x in news_articles
+        ]
+
+        news_str = ""
+        for x in news_content:
+            # news_str = news_str + f"\n\n{x['title']}\n{x['content']}"
+            news_str = news_str + f"\n\n{x['content']}"
+
+
+        message = (f"use the following news articles to answer this prompt as briefly as possible"
+                   f" and leave out data that does not seem important since these articles may be poorly filtered: "
+                   f"'{original_prompt}'\n{news_str}")
+        print(message)
+        gpt_reply = await self.open_ai.general_gpt_query(_input=message, model="gpt-3.5-turbo-1106")
+        gpt_reply = chunk_message(gpt_reply)
+        for x in gpt_reply:
+            await ctx.reply(x)
+            await asyncio.sleep(1)
+        await ctx.reply(
+            embed=self.news_bll.create_brief_article_embed(
+                articles=news_articles,
+                title="Summery was generated using data from news sources"
+            )
+        )
+
+
+    async def ada_set_news_update(self, **kwargs):
+        pass
+
+    async def ada_get_news_updates(self, **kwargs):
+        pass
+
+    async def ada_get_trending(self, **kwargs):
+        pass
+
+    async def ada_link_gen(self, ctx, **kwargs):
+        try:
+            response = await self.misc_bll.generate_invite_link(ctx.channel)
             await ctx.reply(
                 **response
             )

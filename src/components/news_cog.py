@@ -163,16 +163,19 @@ class News(commands.Cog):
 
 
     @commands.hybrid_command(name="notifications")
-    async def get_news_notifications(self, interaction: discord.Interaction,):
+    async def get_news_notifications(
+            self,
+            ctx: commands.Context,
+    ):
         try:
             response = self.news_bll.get_news_notifications(
-                guild_id=interaction.guild_id,
+                guild_id=ctx.guild.id,
             )
-            await interaction.response.send_message(
+            await ctx.reply(
                 **response
             )
         except Exception as e:
-            await interaction.response.send_message(
+            await ctx.reply(
                 content="Something went wrong getting news notifications"
             )
             log_events(str(e.args), self.log_file)

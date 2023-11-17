@@ -42,12 +42,25 @@ def write_json(fname, data=""):
 def chunk_message(inpt: str) -> list:
     """
     Split a message into chunks if the input is over
+    # todo, this is lazy, and works only most of the time, fix
     2000 characters taking into consideration markdown blocks
     :param inpt: input string
     :return: (list) chunks where each chunk is a string < 2000 chars
     """
-    # todo
-    return [inpt[:2000]]
+    if len(inpt) < 2000:
+        return [inpt]
+    text = inpt.split("\n")
+    message = ""
+    parts = []
+    for x in text:
+        if len(message) + len(x) + 1 <2000:
+            message = message+"\n"+x
+        else:
+            parts.append(message)
+            message = x
+
+    return parts + [message[:2000]]
+
 
 
 def log_events(events, log_file):

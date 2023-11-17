@@ -196,6 +196,7 @@ class CreatePeriodicNewsNotification(View):
         else:
             self.params["news_args"].update(received_data)
 
+
     async def start(self):
         self.notification_creator(
             self.channel,
@@ -222,6 +223,29 @@ class NewsBll:
         self.news_api = NewsFunctions(api_key)
         self.task_manager = TaskManager()
         self.db = NewsNotificationDatabase("/opt/bot/data/news_notification.db")
+
+
+    def get_full_raw_news(
+            self,
+            topic: str = "",
+            n: int = 5,
+            source: str = "",
+            category: str = "",
+            country: str = ""
+    ):
+        kwargs = {}
+        if topic != "":
+            kwargs["q"] = topic
+        if n != 0:
+            kwargs["size"] = min(n, 5)
+        if source != "":
+            kwargs["domain"] = source
+        if category != "":
+            kwargs["category"] = category
+        if country != "":
+            kwargs["country"] = country
+        return self.news_api.get_news_raw(**kwargs).get("results", [])
+
 
     def get_news(
             self,
@@ -496,6 +520,7 @@ class NewsBll:
         return e
 
 
+
     def create_article_embed(self, article: dict, color=theme_colors[0]):
         print(article)
         e = discord.Embed(
@@ -512,6 +537,30 @@ class NewsBll:
         else:
             print(f"not setting url")
             print(json.dumps(article, indent=5))
+        return e
+
+    def create_brief_article_embed(self, articles: list, title: str = "", color=theme_colors[0]):
+        fields = ["title", "description", "link"]
+        articles = [
+            {
+                k: x[k]
+                for k in fields
+            }
+            for x in articles
+        ]
+        e = discord.Embed(
+            title=title if title != "" else None,
+            # url=article["Link"],
+            # description=article["description"],
+            color=int(color.replace("#", ""), base=16),
+            # type="article"
+        )
+        for x in articles:
+            e.add_field(
+                name=x["title"],
+                value=f"{x['description']}\n{x['link']}",
+                inline=False
+            )
         return e
 
 

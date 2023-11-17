@@ -1,5 +1,4 @@
 import json
-
 import openai
 
 
@@ -22,12 +21,32 @@ class OpenAIwrapper:
             }
         ]
 
+
+    async def general_gpt_query(self, _input, additional_context=[], model="gpt-4"):
+        try:
+            message = self.context + additional_context + [{"role": "user", "content": _input}]
+            chat = openai.ChatCompletion.create(
+                model=model, messages=message
+            )
+            tokens = chat["usage"]["total_tokens"]
+            print(f"------------------------------- Tokens used: {tokens}")
+            reply = chat.choices[0].message.content
+            print(reply)
+            return reply
+        except openai.error.InvalidRequestError as a:
+            print(a.args)
+            return "OpenAI rejected the prompt"
+
+
+
     def generate_response_gpt(self, _input, model="gpt-4"):
         try:
             message = self.context + [{"role": "user", "content": _input}]
             chat = openai.ChatCompletion.create(
                 model=model, messages=message
             )
+            tokens = chat["usage"]["total_tokens"]
+            print(f"------------------------------- Tokens used: {tokens}")
             reply = chat.choices[0].message.content
             print(reply)
             return reply
@@ -41,32 +60,39 @@ class OpenAIwrapper:
                 n=1,
                 size="1024x1024"
             )
+            tokens = response["usage"]["total_tokens"]
+            print(f"------------------------------- Tokens used: {tokens}")
             image_url = response['data'][0]['url']
             return image_url
             # todo download image and send as a file
-        except openai.error.InvalidRequestError:
+        except openai.error.InvalidRequestError as a:
+            print(a.args)
             return "OpenAI rejected the prompt"
 
 
     async def function_caller(self, _input, tools, model="gpt-4"):
         # "gpt-3.5-turbo-0613"
         try:
-            # model = "gpt-3.5-turbo-0613"
+            # model = "gpt-3.5-turbo-1106"
             message = self.context + [{"role": "user", "content": _input}]
             chat = openai.ChatCompletion.create(
                 model=model,
                 messages=message,
                 tools=tools
             )
-            print(chat)
+            tokens = chat["usage"]["total_tokens"]
             choice = chat.choices[0]
+            print(f"------------------------------- Tokens used: {tokens}")
             if "tool_calls" in choice.message:
                 reply = chat.choices[0].message.tool_calls
                 func = reply[0]["function"]
                 func["arguments"] = json.loads(func["arguments"])
+                print("function call \n", json.dumps(func, indent=4))
                 return True, func
             else:
                 reply = choice.message.content
+                print("Text response \n", reply)
+
                 return False, reply
         except Exception as ire:
             print("issues")
