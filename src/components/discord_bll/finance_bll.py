@@ -53,7 +53,14 @@ class FinanceBll:
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
 
-    def get_
+    def get_yearly_financial_statements(self, tickers: list):
+        try:
+            data = self.ticker_info.get_financial_data(tickers=tickers)
+            print(data)
+            return data
+
+        except Exception as ex:
+            return {"Errors": "errors occurred when getting information for the provided tickers"}
 
 
     def _finance_embed(self, ticker_data, t_name):

@@ -1,12 +1,13 @@
 import traceback
-import matplotlib.pyplot as plt
+import pandas as pd
 import yfinance as yf
+
+# https://www.youtube.com/watch?v=xzBcPoxue-g
 
 
 class TickerInfo:
     def __init__(self):
         self.log_file = "/opt/bot/data/ticker.log"
-
 
     def get_ticker_price_data(self, tickers, period="1mo"):
         intervals = {
@@ -51,8 +52,33 @@ class TickerInfo:
             return {"error": "There was an issues with the query"}
 
 
+    def get_financial_data(self, tickers: list):
+        ts = yf.Tickers(tickers)
+        ret_data = {}
 
+        for ticker in ts.tickers.values():
+            print(ticker)
+            cashflow = ticker.cashflow
+            cash_flow_data = {"dates": None}
+            for key, row in cashflow.iterrows():
+                if cash_flow_data["dates"] is None:
+                    dates = row.keys().values
+                    dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
+                    cash_flow_data["dates"] = dates
+                cash_flow_data[key] = row.to_list()
+            ret_data[ticker.ticker] = {}
+            ret_data[ticker.ticker]["cashflow"] = cash_flow_data
 
+            bs = ticker.balance_sheet
+            bs_data = {"dates": None}
+            for key, row in bs.iterrows():
+                if bs_data["dates"] is None:
+                    dates = row.keys().values
+                    dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
+                    bs_data["dates"] = dates
+                bs_data[key] = row.to_list()
+            ret_data[ticker.ticker]["balance_sheet"] = bs_data
+        return ret_data
 
 if __name__ == '__main__':
     pass

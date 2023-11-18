@@ -2,6 +2,7 @@ import json
 from ..functions.ai import OpenAIwrapper
 from ..utils import log_events, theme_colors, read_file
 from .trends_bll import get_trending_searches
+from .finance_bll import FinanceBll
 
 
 class AIBll:
@@ -15,6 +16,21 @@ class AIBll:
                         "Responses to direct requests should not be in any kind of template format"
             )
         ]
+        self.finance = FinanceBll()
+        self.function_map = {
+            # "news": self.ada_news,
+            # "get_news_notifications": self.ada_get_news_updates,
+            # "set_news_notification": self.ada_set_news_update,
+            # "text_response": self.text_response,
+            # "generate_invite_link": self.ada_link_gen,
+            # "ticker": self.ada_ticker,
+            # # "trending": self.ada_get_trending,
+            # "assign_roles": self.ada_assign_roles,
+            # "invite": self.ada_link_gen,
+            # "generate_image": self.ada_image_gen,
+            # "news_summery": self.ada_news_summery,
+            "ticker_financials": self.finance.get_yearly_financial_statements
+        }
 
 
     @staticmethod
@@ -171,6 +187,84 @@ class AIBll:
             if len(ex.args) > 0:
                 message = ex.args[0]
             return {"error": message}
+
+
+    def call_eve(self, prompt):
+        """
+        we do the continuous function calling here
+        :param prompt:
+        :return:
+        """
+        # todo agent will eventually be created separately
+        # agent = self.openai.create_agent(
+        #     instructions="You are a bot responsible answering questions and for determining what "
+        #                  "functions need to be called to answer them",
+        #     name="EVE",
+        #     tools=[
+        #         self.function_definer(
+        #             name="ticker_financials",
+        #             desc="function to get information financial statement information about a stock",
+        #             params={
+        #                 "tickers": {
+        #                     "type": "array",
+        #                     "items": {
+        #                         "type": "string",
+        #                         "description": "Stock ticker symbol",
+        #                     },
+        #                     "description": "List of stock ticker symbols up to 5",
+        #                 }
+        #             },
+        #             required=["tickers"]
+        #         )
+        #     ],
+        #     model="gpt-4-1106-preview",
+        # )
+        # agent_id = agent.id
+        agent_id = "asst_tW3PwDnWWF3Qq1yzkQEzgqYw"
+
+        thread = self.openai.create_thread()
+        message = self.openai.create_message(
+            thread_id=thread.id,
+            content=prompt
+        )
+        runner = self.openai.create_run(
+            thread_id=thread.id,
+            agent_id=agent_id,
+            instructions="provide the user with the information they are requesting"
+        )
+        while True:
+            runner = self.openai.wait_for_run(
+                run_id=runner.id,
+                thread_id=thread.id,
+                dt=2
+            )
+            if runner.status == "requires_action":
+                tool = runner.required_action
+                funcs_to_call = tool.submit_tool_outputs.tool_calls
+                tool_outputs = []
+                for f in funcs_to_call:
+                    print(f)
+                    func_call_id = f.id
+                    func_name = f.function.name
+                    args = json.loads(f.function.arguments)
+                    output = self.function_map[func_name](**args)
+                    tool_outputs.append(
+                        {
+                            "tool_call_id": func_call_id,
+                            "output": str(output)
+                        }
+                    )
+                runner = self.openai.submit_tool_to_output(
+                    run_id=runner.id,
+                    thread_id=thread.id,
+                    tool_outputs=tool_outputs
+                )
+            elif runner.status in ["expired", "cancelling", "cancelled", "failed", "expired", "completed"]:
+                print(runner.status)
+                messages = self.openai.retrieve_messages(thread_id=thread.id)
+                print(messages)
+                print(messages.data[0].content[0].text.value)
+                break
 
 
 

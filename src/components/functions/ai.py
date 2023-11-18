@@ -76,7 +76,7 @@ class OpenAIwrapper:
         try:
             # model = "gpt-3.5-turbo-1106"
             message = self.context + [{"role": "user", "content": _input}]
-            chat = openai.ChatCompletion.create(
+            chat = self.client.chat.completions.create(
                 model=model,
                 messages=message,
                 tools=tools
@@ -100,13 +100,15 @@ class OpenAIwrapper:
             print(ire.args)
             return False, "OpenAI rejected the prompt"
 
+
     def create_thread(self):
         return self.client.beta.threads.create()
+
 
     def create_agent(
             self,
             instructions: str,
-            name: str ="",
+            name: str = "",
             model: str = "gpt-4-1106-preview",
             tools: list = []
     ):
@@ -116,7 +118,7 @@ class OpenAIwrapper:
             model=model,
             tools=tools
         )
-        return
+        return agent
 
 
     def create_message(
@@ -175,9 +177,34 @@ class OpenAIwrapper:
             )
             print(run.status)
             if run.status not in ["queued", "in_progress"]:
+                print(run)
                 return run
-            asyncio.sleep(dt)
+            time.sleep(dt)
+            # await asyncio.sleep(dt)
         return None
+
+
+    def submit_tool_to_output(
+            self,
+            run_id: str,
+            thread_id: str,
+            tool_outputs: list,
+    ):
+
+        run = self.client.beta.threads.runs.submit_tool_outputs(
+            thread_id=thread_id,
+            run_id=run_id,
+            tool_outputs=tool_outputs
+        )
+        return run
+
+    def retrieve_messages(
+            self,
+            thread_id
+    ):
+        return self.client.beta.threads.messages.list(
+            thread_id=thread_id
+        )
 
 
 if __name__ == '__main__':
