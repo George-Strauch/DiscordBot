@@ -11,10 +11,10 @@ class Trends(commands.Cog):
         self.log_file = "/opt/bot/data/trending.log"
         self.trends_searcher = None
 
-    async def trending(self, ctx: commands.Context):
+    async def trending(self):
         """
         Get a list of trending google searches
         """
-        log_events(f"[{ctx.author.name}] QUERIED TRENDING", self.log_file)
+        # todo
         trends = get_trending_searches()
-        await interaction.edit_original_response(content=trends[:2000])
+        return trends

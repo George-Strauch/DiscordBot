@@ -1,6 +1,7 @@
 import discord
 from ..functions.finance import TickerInfo
 from ..utils import log_events, theme_colors
+import matplotlib.pyplot as plt
 from PIL import Image
 import io
 
@@ -13,15 +14,18 @@ class FinanceBll:
         periods = ["1d" "5d", "1mo", "3mo", "6mo", "5y", "ytd", "max"]
 
 
-    def get_ticker_info(
+    def send_ticker_price(
             self,
             tickers: list,
             period: str = "1mo"
     ):
         """
-        Get info for stock ticker(s)
+        :param tickers: list of tickers, indexes like dji and spx need to be prefixed with '^' ex: ^dji and ^spx
+        :param period: the period of time we are viewing the price over:
+         ["1d" "5d", "1mo", "3mo", "6mo", "5y", "ytd", "max"]
+        :return: content sent to discord
         """
-        ticker_data = self.ticker_info.get_raw_ticker_data(tickers, period=period)
+        ticker_data = self.ticker_info.get_ticker_price_data(tickers, period=period)
         print(ticker_data)
         if "error" in ticker_data:
             # todo log
@@ -41,7 +45,7 @@ class FinanceBll:
                 im_flipped.save(image_binary, format='PNG')
                 image_binary.seek(0)
                 embeds = [
-                    self.finance_embed(x, k)
+                    self._finance_embed(x, k)
                     for k, x in ticker_data.items()
                 ]
                 return {
@@ -49,8 +53,10 @@ class FinanceBll:
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
 
+    def get_
 
-    def finance_embed(self, ticker_data, t_name):
+
+    def _finance_embed(self, ticker_data, t_name):
         p1 = ticker_data['prices'][0]
         p2 = ticker_data['prices'][-1]
         interval = ticker_data['interval']
@@ -75,3 +81,17 @@ class FinanceBll:
         )
         e.set_footer(text=f"Source: YFinance")
         return e
+
+    def _get_plt(self, tickers):
+        # todo reverse then invert
+        fig, ax = plt.subplots(figsize=(4.1/3, 1/3), dpi=300)
+        # fig.yscale("log")
+        for t, tdata in tickers.items():
+            prices = list(reversed(tdata["prices"]))
+            norm = prices[-1]
+            prices = [x/norm for x in prices]
+            ax.plot(prices, linewidth=.5, color=tdata["color"])
+            base = [1]*len(prices)
+            ax.plot(base, linewidth=.1, color="#000000", alpha=0.2)
+        ax.axis('off')
+        return fig

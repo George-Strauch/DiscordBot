@@ -1,3 +1,5 @@
+import json
+
 from pytrends.request import TrendReq
 import traceback
 
@@ -24,7 +26,6 @@ bad = [
     "Britney Spears",
     "The NBA Finals",
     "LPGA",
-
 ]
 bad = [x.upper() for x in bad]
 
@@ -36,10 +37,16 @@ def get_trending_searches():
     try:
         pt = TrendReq()
         t = pt.realtime_trending_searches()
-        titles = [x for x in t['title']]
-        titles = [x[:60] for x in titles if not any([a.upper() in bad for a in x.split(", ")])]
-        titles = "\n\n".join(titles)
-        return titles if len(titles) > 0 else "All trending items were filtered as sports or irrelevant"
+
+        t = list(t["title"])
+        return t
+        # t = [", ".join(x) for x in t]
+        print(json.dumps(t, indent=4))
+
+        # t = list(t["entityNames"])
+        # t = [", ".join(x) for x in t]
+        # print(json.dumps(t, indent=4))
+
     except Exception as e:
         print(e.args)
         # todo catch specific exception
@@ -68,3 +75,8 @@ def interest(q):
         # todo catch specific exception
         print(traceback.format_exc(e))
         return "There was an issue querying trending data"
+
+
+
+if __name__ == '__main__':
+    get_trending_searches()

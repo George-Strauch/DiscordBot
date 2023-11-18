@@ -39,7 +39,7 @@ class Finance(commands.Cog):
         if not isinstance(period, str):
             period = period.value
         tickers = tickers.split(" ")
-        data = self.finance.get_ticker_info(
+        data = self.finance.send_ticker_price(
             tickers=tickers,
             period=period
         )

@@ -8,10 +8,7 @@ class TickerInfo:
         self.log_file = "/opt/bot/data/ticker.log"
 
 
-    def get_raw_ticker_data(self, tickers, period="1mo"):
-        # intervals = "1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo"
-        # periods = ["1d" "5d", "1mo", "3mo", "6mo", "5y", "ytd", "max"]
-        print(tickers, period)
+    def get_ticker_price_data(self, tickers, period="1mo"):
         intervals = {
             "1d": "15m",
             "5d": "1h",
@@ -22,7 +19,6 @@ class TickerInfo:
             "5y": "1mo",
             "max": "3mo",
         }
-
         try:
             str_adjust = 15
             data = {}
@@ -47,17 +43,6 @@ class TickerInfo:
                     this_tickers_data["dates"].append(t_)
                     this_tickers_data["prices"].append(instant.Close)
                     this_tickers_data["volume"].append(instant.Volume)
-
-                p1 = this_tickers_data['prices'][0]
-                p2 = this_tickers_data['prices'][-1]
-                # this_tickers_data["last"] = p2
-
-                this_tickers_data["embed_str"] = (
-                    f"{this_tickers_data['dates'][0]} ${p1:.2f}\n"
-                    f"{this_tickers_data['dates'][-1]} ${p2:.2f}\n"
-                    f"{'Δ'.ljust(str_adjust, ' ')} ${p2-p1:.2f} ({((p2-p1)/p1)*100:.2f}%)\n"
-                    f"{'Volume'.ljust(str_adjust, ' ')} {round(this_tickers_data['volume'][-1])}\n"
-                )
                 data[t_n.upper()] = this_tickers_data
             return data
         except Exception as e:
@@ -66,27 +51,8 @@ class TickerInfo:
             return {"error": "There was an issues with the query"}
 
 
-    def get_plt(self, tickers):
-        # todo reverse then invert
-        fig, ax = plt.subplots(figsize=(4.1/3, 1/3), dpi=300)
-        # fig.yscale("log")
-        for t, tdata in tickers.items():
-            prices = list(reversed(tdata["prices"]))
-            norm = prices[-1]
-            prices = [x/norm for x in prices]
-            ax.plot(prices, linewidth=.5, color=tdata["color"])
 
-            base = [1]*len(prices)
-            ax.plot(base, linewidth=.1, color="#000000", alpha=0.2)
-
-        ax.axis('off')
-        return fig
 
 
 if __name__ == '__main__':
-    ti = TickerInfo()
-    tickers = ["msft", "goog"]
-    a = ti.get_raw_ticker_data(tickers, period="1mo")
-    for t, v in a.items():
-        print(t)
-        print(v["embed_str"])
+    pass

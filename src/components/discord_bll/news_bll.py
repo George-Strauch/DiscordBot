@@ -5,14 +5,13 @@ from typing import Any
 
 import discord
 from discord._types import ClientT
-from discord.ext import commands, tasks
-from discord import app_commands, Interaction
+from discord.ext import tasks
+from discord import Interaction
 from discord.ui import Select, View, Button
 
-from .task_manager import TaskManager
+from src.components.functions.task_manager import TaskManager
 from ..functions.news import NewsFunctions
-from ..functions.warn_notice import get_new_warn_data
-from ..utils import log_events, chunk_message, theme_colors
+from ..utils import log_events, theme_colors
 from ..database import NewsNotificationDatabase
 from datetime import datetime as dt
 from datetime import timedelta as tdelta
@@ -586,3 +585,5 @@ class NewsBll:
             tasks_for_guild[k]["task"] = new_task
         self.task_manager.news_notifications[guild.id] = tasks_for_guild
 
+if __name__ == '__main__':
+    pass

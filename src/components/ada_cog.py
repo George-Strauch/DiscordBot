@@ -9,6 +9,7 @@ from .functions.ai import OpenAIwrapper
 from .discord_bll.finance_bll import FinanceBll
 from .discord_bll.news_bll import NewsBll
 from .discord_bll.misc_bll import MiscBll
+from .discord_bll.trends_bll import get_trending_searches
 from .utils import chunk_message
 
 
@@ -98,6 +99,14 @@ tools = [
         },
         required=["prompt"]
     ),
+
+    function_definer(
+        name="trending",
+        desc="Summarizes current google trending searches. this method will first get a list of trending search terms, "
+             "then use an LLM to summarize them",
+        params={},
+        required=[]
+    ),
 ]
 
 
@@ -117,11 +126,12 @@ class AdaNlp(commands.Cog):
             "text_response": self.text_response,
             "generate_invite_link": self.ada_link_gen,
             "ticker": self.ada_ticker,
-            "trending": self.ada_get_trending,
+            # "trending": self.ada_get_trending,
             "assign_roles": self.ada_assign_roles,
             "invite": self.ada_link_gen,
             "generate_image": self.ada_image_gen,
-            "news_summery": self.ada_news_summery
+            "news_summery": self.ada_news_summery,
+            "trending": self.ada_google_trends_summery
         }
         self.placeholder_delete = ["news", "text_response", "ticker"]
 
@@ -189,7 +199,7 @@ class AdaNlp(commands.Cog):
 
     async def ada_ticker(self, ctx, **kwargs):
         # tickers = kwargs["tickers"].split(" ")
-        data = self.finance_bll.get_ticker_info(
+        data = self.finance_bll.send_ticker_price(
             tickers=kwargs["tickers"],
             # period=kwargs.get("period", )
         )
@@ -255,7 +265,10 @@ class AdaNlp(commands.Cog):
                    f" and leave out data that does not seem important since these articles may be poorly filtered: "
                    f"'{original_prompt}'\n{news_str}")
         print(message)
-        gpt_reply = await self.open_ai.general_gpt_query(_input=message, model="gpt-3.5-turbo-1106")
+        gpt_reply = await self.open_ai.general_gpt_query(
+            _input=message,
+            # model="gpt-3.5-turbo-1106"
+        )
         gpt_reply = chunk_message(gpt_reply)
         for x in gpt_reply:
             await ctx.reply(x)
@@ -276,6 +289,37 @@ class AdaNlp(commands.Cog):
 
     async def ada_get_trending(self, **kwargs):
         pass
+
+    async def ada_google_trends_summery(self, ctx, **kwargs):
+        trends = get_trending_searches()
+        trends = "\n".join(trends)
+
+        message = (f"Summarize this list of trending search terms in a way that clearly explains what "
+                   f"event or idea each of these is referring to. "
+                   f"Each line is a set of related search terms about the same general event or idea seperated "
+                   f"by a comma. "
+                   f"Each bullet point in the summary should be formatted as follows: "
+                   f"<very brief condensed text of a search term>: <explanation of event or idea>"
+                   f"each bullet point should belong under a super category such as sports, politics, music etc... "
+                   f"example: \n ```\n"
+                   f"**Sports**\n"
+                   f" - 'MLB': ...\n"
+                   f"**Technology**\n"
+                   f" - 'twitter': ...\n```\n"
+                   f"Only use at max the 25 most important and noteworthy search terms, and do not "
+                   f"repeat bullet-points under different categories. Basic sporting events are lower priority "
+                   # f"the summary should have them in order of importance."
+                   f"\n\n{trends}")
+        print(message)
+        gpt_reply = await self.open_ai.general_gpt_query(
+            _input=message,
+            # model="gpt-3.5-turbo-1106"
+        )
+        gpt_reply = chunk_message(gpt_reply)
+        for x in gpt_reply:
+            await ctx.reply(x)
+            await asyncio.sleep(1)
+
 
     async def ada_link_gen(self, ctx, **kwargs):
         try:
