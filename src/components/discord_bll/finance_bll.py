@@ -1,3 +1,6 @@
+import datetime
+
+import pandas as pd
 import discord
 from ..functions.finance import TickerInfo
 from ..utils import log_events, theme_colors
@@ -35,7 +38,7 @@ class FinanceBll:
         else:
             for i, k in enumerate(ticker_data.keys()):
                 ticker_data[k]["color"] = theme_colors[i]
-            picture_plot = self.ticker_info.get_plt(ticker_data)
+            picture_plot = self._get_plt(ticker_data)
             with io.BytesIO() as image_binary:
                 picture_plot.savefig(image_binary, format='PNG', bbox_inches='tight', pad_inches=0, transparent=True)
                 pillow_image = Image.open(image_binary)
@@ -53,12 +56,46 @@ class FinanceBll:
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
 
-    def get_yearly_financial_statements(self, tickers: list, fields: list = []):
+    def get_financial_statements(self, tickers: list, fields: list = []):
         try:
-            data = self.ticker_info.get_financial_data(tickers=tickers)
-            print(data)
-            return data
+            response = self.ticker_info.get_financial_data(tickers=tickers)
+            if not response:
+                return {
+                    "error": "An issue occurred getting ticker data from api"
+                }
+            ret_data = {}
+            for ticker in response.tickers.values():
+                ret_data[ticker.ticker] = {}
+                cashflow = ticker.quarterly_cashflow
+                cash_flow_data = {"dates": None}
+                for key, row in cashflow.iterrows():
+                    if cash_flow_data["dates"] is None:
+                        dates = row.keys().values
+                        dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
+                        cash_flow_data["dates"] = dates
+                    if key in fields:
+                        cash_flow_data[key] = row.to_list()
+                if len(cash_flow_data) > 1:
+                    ret_data[ticker.ticker]["cashflow"] = cash_flow_data
 
+                bs = ticker.quarterly_balance_sheet
+                bs_data = {"dates": None}
+                for key, row in bs.iterrows():
+                    if bs_data["dates"] is None:
+                        dates = row.keys().values
+                        dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
+                        bs_data["dates"] = dates
+                    if key in fields:
+                        bs_data[key] = row.to_list()
+
+                if len(bs_data) > 1:
+                    ret_data[ticker.ticker]["balance_sheet"] = bs_data
+
+                if "earnings_dates" in fields:
+                    dates = ticker.earnings_dates.T.keys().values
+                    earnings_dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
+                    ret_data[ticker.ticker]["earnings_dates"] = list(set(earnings_dates))
+            return ret_data
         except Exception as ex:
             return {"Errors": "errors occurred when getting information for the provided tickers"}
 
@@ -74,16 +111,38 @@ class FinanceBll:
             # description=f"``{ticker_data['embed_str']}``",
             color=int(ticker_data["color"].replace("#", ""), base=16)
         )
+        dt = datetime.datetime.now() - ticker_data['date_times'][0]
+        dt_units = round(dt.total_seconds())//60
+        time_frame = "Minute"
+        if dt_units // 60 > 0:
+            time_frame = "Hour"
+            dt_units = dt_units//60
+            if dt_units // 24 > 0:
+                time_frame = "Day"
+                dt_units = dt_units // 24
+                if dt_units // 7 > 0:
+                    time_frame = "Week"
+                    dt_units = dt_units // 7
+
+        if dt_units > 1 or dt_units == 0:
+            time_frame = f"{time_frame}s"
+
         e.insert_field_at(
             1,
-            name=f"{ticker_data['dates'][0]}",
+            name=f"{ticker_data['dates'][0]} [{dt_units} {time_frame} Ago]",
             value=f"```${p1:.2f}\nΔ ${p2-p1:.2f} ({((p2-p1)/p1)*100:.2f})%```",
-            inline = True
+            inline = False
         )
         e.insert_field_at(
             2,
-            name=f"Volume (over {interval} period)",
+            name=f"Volume",
             value=f"```{str(round(ticker_data['volume'][-1])).ljust(18, ' ')}```",
+            inline=False
+        )
+        e.insert_field_at(
+            3,
+            name=f"Time Frame",
+            value=f"```Total Period: {ticker_data['period']}\nIntervals: {ticker_data['interval']}```",
             inline=False
         )
         e.set_footer(text=f"Source: YFinance")

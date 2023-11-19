@@ -1,4 +1,6 @@
 import asyncio
+import datetime
+import pandas as pd
 import json
 import traceback
 from ..utils import log_events
@@ -21,7 +23,7 @@ class AvaBll:
         self.news_bll = NewsBll()
         self.misc_bll = MiscBll()
         self.finance_bll = FinanceBll()
-        self.ava_agent = "asst_2ghWeXAIdUfvef8feiT6n6XS"
+        self.ava_agent = "asst_2LwmMm4H1MZhWUM7DvVa4iS4"
         self.function_map = {
             "get_news": self.ava_get_news,
             "send_news": self.ava_send_news,
@@ -56,7 +58,8 @@ class AvaBll:
             runner = self.openai.create_run(
                 thread_id=thread.id,
                 agent_id=self.ava_agent,
-                instructions="provide the user with the information they are requesting"
+                instructions=f"provide the user with the information they are requesting,"
+                             f" the current date is {pd.to_datetime(str(datetime.datetime.now())).strftime('%Y-%m-%d')}"
             )
             while True:
                 runner = self.openai.wait_for_run(
@@ -137,7 +140,7 @@ class AvaBll:
         )
 
     def ava_get_financial_info(self, tickers, **kwargs):
-        return self.finance_bll.get_yearly_financial_statements(
+        return self.finance_bll.get_financial_statements(
             tickers=tickers,
             **kwargs
         )
@@ -198,6 +201,7 @@ class AvaBll:
             # todo make sure that is enough characters, perhapse break by space
             # words = x["content"].split(" ")
             refined_news_content.append(x["content"][:2000])
+        print(json.dumps(refined_news_content, indent=4))
         refined_news_content = "\n\n".join(refined_news_content)
         print(f"sending gpt:\n{refined_news_content}")
         return refined_news_content

@@ -29,21 +29,24 @@ class TickerInfo:
                 h = h.iloc
                 this_tickers_data = {
                     "dates": [],
+                    "date_times": [],
                     "prices": [],
                     "volume": [],
                     "embed_str": "",
-                    "interval": intervals.get(period, "1d")
+                    "interval": intervals.get(period, "1d"),
+                    "period": period
                 }
                 for instant in list(h):
-                    t_ = str(instant.name).split(" ")
+                    _dt = str(instant.name).split(" ")
                     if period == "1d":
-                        t_ = t_[1].split("-")[0][:-3] + " EST"
+                        t_ = _dt[1].split("-")[0][:-3] + " EST"
                         t_ = t_.ljust(str_adjust, " ")
                     else:
-                        t_ = t_[0].ljust(str_adjust, " ")
+                        t_ = _dt[0].ljust(str_adjust, " ")
                     this_tickers_data["dates"].append(t_)
                     this_tickers_data["prices"].append(instant.Close)
                     this_tickers_data["volume"].append(instant.Volume)
+                    this_tickers_data["date_times"].append(instant.name.replace(tzinfo=None))
                 data[t_n.upper()] = this_tickers_data
             return data
         except Exception as e:
@@ -53,32 +56,8 @@ class TickerInfo:
 
 
     def get_financial_data(self, tickers: list):
-        ts = yf.Tickers(tickers)
-        ret_data = {}
+        try:
+            return yf.Tickers(tickers)
+        except Exception as ex:
+            return None
 
-        for ticker in ts.tickers.values():
-            print(ticker)
-            cashflow = ticker.cashflow
-            cash_flow_data = {"dates": None}
-            for key, row in cashflow.iterrows():
-                if cash_flow_data["dates"] is None:
-                    dates = row.keys().values
-                    dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
-                    cash_flow_data["dates"] = dates
-                cash_flow_data[key] = row.to_list()
-            ret_data[ticker.ticker] = {}
-            ret_data[ticker.ticker]["cashflow"] = cash_flow_data
-
-            bs = ticker.balance_sheet
-            bs_data = {"dates": None}
-            for key, row in bs.iterrows():
-                if bs_data["dates"] is None:
-                    dates = row.keys().values
-                    dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
-                    bs_data["dates"] = dates
-                bs_data[key] = row.to_list()
-            ret_data[ticker.ticker]["balance_sheet"] = bs_data
-        return ret_data
-
-if __name__ == '__main__':
-    pass

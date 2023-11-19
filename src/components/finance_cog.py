@@ -13,7 +13,7 @@ class Finance(commands.Cog):
         self.ticker_info = TickerInfo()
         self.periods = ["1d" "5d", "1mo", "3mo", "6mo", "5y", "1yr", "max"]
 
-    @app_commands.command(name="ticker")
+    @commands.hybrid_command(name="ticker")
     @app_commands.describe(tickers="Stock Tickers (up to 5) (seperated by single space if multiple are provided"
                                    "For crypto you must specify exchange currency, (ex btc-usd)")
     @app_commands.describe(period="Period of time over which you want to show data")
@@ -29,7 +29,7 @@ class Finance(commands.Cog):
     ])
     async def ticker(
             self,
-            interaction: Interaction,
+            ctx: commands.Context,
             tickers: str,
             period: discord.app_commands.Choice[str] = "1mo",
     ):
@@ -43,4 +43,4 @@ class Finance(commands.Cog):
             tickers=tickers,
             period=period
         )
-        await interaction.response.send_message(**data)
+        await ctx.reply(**data)
