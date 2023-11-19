@@ -9,7 +9,7 @@ from components.trends_cog import Trends
 from components.finance_cog import Finance
 from components.interactions_cog import Interactions
 from components.admins_cog import AdminActions
-from components.ada_cog import AdaNlp
+from components.ava_cog import AvaNlp
 from components.misc_cog import Misc
 
 
@@ -54,7 +54,7 @@ class BasedClient(commands.Bot):
         is called every time a message is sent in any channel the bot is a member of
         """
         if message.author.bot:
-            print("Ignoring bot message")
+            # print("Ignoring bot message")
             return
         print(f"{message.author.name} SAID: {message.content}")
         await super().on_message(message)  # todo?
@@ -67,17 +67,11 @@ class BasedClient(commands.Bot):
 
     async def load_cogs(self):
         print("Loading Cogs")
-        await self.add_cog(AI(self, api_key=self.creds["OPENAI_TOKEN"]))
-        await self.add_cog(News(self, api_key=self.creds["NEWSDATAIO_TOKEN"], guilds=self.guilds))
+        await self.add_cog(AI(self))
+        await self.add_cog(News(self, guilds=self.guilds))
         await self.add_cog(Trends(self))
         await self.add_cog(Finance(self))
-        # await self.add_cog(Interactions(self))
-        await self.add_cog(AdaNlp(
-            self,
-            news_api_key=self.creds["NEWSDATAIO_TOKEN"],
-            ai_api_key=self.creds["OPENAI_TOKEN"])
-        )
-        # await self.add_cog(NewsTask(self, api_key=self.creds["NEWSDATAIO_TOKEN"]))
+        await self.add_cog(AvaNlp(self))
         await self.add_cog(AdminActions(self))
         await self.add_cog(Misc(self))
 

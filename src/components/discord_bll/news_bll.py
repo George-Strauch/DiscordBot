@@ -15,6 +15,7 @@ from ..utils import log_events, theme_colors
 from ..database import NewsNotificationDatabase
 from datetime import datetime as dt
 from datetime import timedelta as tdelta
+from ..utils import read_file
 
 
 news_categories = {
@@ -217,9 +218,10 @@ class CreatePeriodicNewsNotification(View):
 
 
 class NewsBll:
-    def __init__(self, api_key: str = ""):
+    def __init__(self,):
         self.log_file = "/opt/bot/data/news.log"
-        self.news_api = NewsFunctions(api_key)
+        cred_file = "/opt/bot/data/creds.json"
+        self.news_api = NewsFunctions(read_file(cred_file)["NEWSDATAIO_TOKEN"])
         self.task_manager = TaskManager()
         self.db = NewsNotificationDatabase("/opt/bot/data/news_notification.db")
 
@@ -521,7 +523,6 @@ class NewsBll:
 
 
     def create_article_embed(self, article: dict, color=theme_colors[0]):
-        print(article)
         e = discord.Embed(
             title=article["Title"],
             url=article["Link"],
@@ -531,11 +532,9 @@ class NewsBll:
         )
         e.set_footer(text=article["footer"])
         if "img_url" in article and article["img_url"] not in ["", None]:
-            print(f"setting url: {article['img_url']}")
             e.set_thumbnail(url=article["img_url"])
         else:
             print(f"not setting url")
-            print(json.dumps(article, indent=5))
         return e
 
     def create_brief_article_embed(self, articles: list, title: str = "", color=theme_colors[0]):

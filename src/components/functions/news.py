@@ -24,9 +24,6 @@ class NewsFunctions:
             del refine[b]
         try:
             results = self.client.news_api(**refine)
-            print("-----------------------------------------------------------")
-            print(json.dumps(results, indent=4))
-            print("-----------------------------------------------------------")
 
             return results
         except Exception as e:

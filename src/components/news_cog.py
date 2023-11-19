@@ -61,10 +61,10 @@ news_choices = {
 
 
 class News(commands.Cog):
-    def __init__(self, bot: commands.Bot, api_key: str, guilds=[]):
+    def __init__(self, bot: commands.Bot, guilds=[]):
         self.bot = bot
         self.log_file = "/opt/bot/data/news.log"
-        self.news_bll = NewsBll(api_key=api_key)
+        self.news_bll = NewsBll()
         self.db = NewsNotificationDatabase("/opt/bot/data/news_notification.db")
         print("loading tasks from db")
         for g in guilds:

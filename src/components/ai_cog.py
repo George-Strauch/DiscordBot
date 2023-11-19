@@ -2,14 +2,15 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from .functions.ai import OpenAIwrapper
-from .utils import log_events, chunk_message
+from .utils import log_events, chunk_message, read_file
 
 
 class AI(commands.Cog):
-    def __init__(self, bot: commands.Bot, api_key: str=""):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.log_file = "/opt/bot/data/ai.log"
-        self.open_ai = OpenAIwrapper(api_key)
+        cred_file = "/opt/bot/data/creds.json"
+        self.open_ai = OpenAIwrapper(read_file(cred_file)["OPENAI_TOKEN"])
 
     @app_commands.command(name="gpt", description="use chat GPT")
     @app_commands.describe(prompt="Prompt for GPT4")

@@ -14,7 +14,6 @@ class OpenAIwrapper:
         self.client = OpenAI(api_key=self.api_key)
 
 
-
     def gpt_response(
             self,
             context: list,
@@ -71,34 +70,34 @@ class OpenAIwrapper:
             return {"error": message}
 
 
-    def function_caller(self, _input, tools, model="gpt-4"):
-        # "gpt-3.5-turbo-0613"
-        try:
-            # model = "gpt-3.5-turbo-1106"
-            message = self.context + [{"role": "user", "content": _input}]
-            chat = self.client.chat.completions.create(
-                model=model,
-                messages=message,
-                tools=tools
-            )
-            tokens = chat["usage"]["total_tokens"]
-            choice = chat.choices[0]
-            print(f"------------------------------- Tokens used: {tokens}")
-            if "tool_calls" in choice.message:
-                reply = chat.choices[0].message.tool_calls
-                func = reply[0]["function"]
-                func["arguments"] = json.loads(func["arguments"])
-                print("function call \n", json.dumps(func, indent=4))
-                return True, func
-            else:
-                reply = choice.message.content
-                print("Text response \n", reply)
-
-                return False, reply
-        except Exception as ire:
-            print("issues")
-            print(ire.args)
-            return False, "OpenAI rejected the prompt"
+    # def function_caller(self, _input, tools, model="gpt-4"):
+    #     # "gpt-3.5-turbo-0613"
+    #     try:
+    #         # model = "gpt-3.5-turbo-1106"
+    #         message = self.context + [{"role": "user", "content": _input}]
+    #         chat = self.client.chat.completions.create(
+    #             model=model,
+    #             messages=message,
+    #             tools=tools
+    #         )
+    #         tokens = chat["usage"]["total_tokens"]
+    #         choice = chat.choices[0]
+    #         print(f"------------------------------- Tokens used: {tokens}")
+    #         if "tool_calls" in choice.message:
+    #             reply = chat.choices[0].message.tool_calls
+    #             func = reply[0]["function"]
+    #             func["arguments"] = json.loads(func["arguments"])
+    #             print("function call \n", json.dumps(func, indent=4))
+    #             return True, func
+    #         else:
+    #             reply = choice.message.content
+    #             print("Text response \n", reply)
+    #
+    #             return False, reply
+    #     except Exception as ire:
+    #         print("issues")
+    #         print(ire.args)
+    #         return False, "OpenAI rejected the prompt"
 
 
     def create_thread(self):
@@ -170,11 +169,17 @@ class OpenAIwrapper:
         :param dt:
         :return:
         """
+        strike = 0
         for i in range(n):
             run = self.client.beta.threads.runs.retrieve(
                 run_id=run_id,
                 thread_id=thread_id
             )
+            if run is None:
+                strike += 1
+                print(f"strike: {strike}")
+                if strike == 3:
+                    return None
             print(run.status)
             if run.status not in ["queued", "in_progress"]:
                 print(run)
@@ -190,7 +195,6 @@ class OpenAIwrapper:
             thread_id: str,
             tool_outputs: list,
     ):
-
         run = self.client.beta.threads.runs.submit_tool_outputs(
             thread_id=thread_id,
             run_id=run_id,

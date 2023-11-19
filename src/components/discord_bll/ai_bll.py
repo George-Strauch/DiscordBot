@@ -189,37 +189,13 @@ class AIBll:
             return {"error": message}
 
 
-    def call_eve(self, prompt):
+    def call_ava(self, prompt):
         """
         we do the continuous function calling here
         :param prompt:
         :return:
         """
-        # todo agent will eventually be created separately
-        # agent = self.openai.create_agent(
-        #     instructions="You are a bot responsible answering questions and for determining what "
-        #                  "functions need to be called to answer them",
-        #     name="EVE",
-        #     tools=[
-        #         self.function_definer(
-        #             name="ticker_financials",
-        #             desc="function to get information financial statement information about a stock",
-        #             params={
-        #                 "tickers": {
-        #                     "type": "array",
-        #                     "items": {
-        #                         "type": "string",
-        #                         "description": "Stock ticker symbol",
-        #                     },
-        #                     "description": "List of stock ticker symbols up to 5",
-        #                 }
-        #             },
-        #             required=["tickers"]
-        #         )
-        #     ],
-        #     model="gpt-4-1106-preview",
-        # )
-        # agent_id = agent.id
+
         agent_id = "asst_tW3PwDnWWF3Qq1yzkQEzgqYw"
 
         thread = self.openai.create_thread()
@@ -267,32 +243,138 @@ class AIBll:
                 break
 
 
-
-
-
-
-
-    def assistant_sandbox(
+    def create_agent(
             self,
-            # prompt: str,
-            # additional_context: list = None,
-            # model: str = "gpt-4",
-            # **kwargs
-    ) -> dict:
-        """
-        query Open ai
-        :param prompt: question or request of model
-        :param additional_context: list of context objects
-        :param model: gpt model
-        :return: dict {"content": "", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
-        """
-        try:
-            self.openai.thread_starter_test()
-        except Exception as ex:
-            message = "An error occurred querying OpenAi"
-            if len(ex.args) > 0:
-                message = ex.args[0]
-            return {"error": message}
+    ):
+
+        tools = [
+            self.function_definer(
+                name="get_ticker_info",
+                desc="function to provide GPT with a info about yearly financial reports of one or more publicly traded"
+                     " companies including balance sheet, income statement, cashflow etc",
+                params={
+                    "tickers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "Stock ticker symbol",
+                        },
+                        "description": "List of stock ticker symbols up to 5",
+                    }
+                },
+                required=["tickers"]
+            ),
+
+            self.function_definer(
+                name="send_ticker_price",
+                desc="function to send price and price graph for one or multiple stock tickers directly to the user in "
+                     "Discord",
+                params={
+                    "tickers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "Stock ticker symbol. Tickers for indexes should be prefixed with '^'"
+                                           " for example, the dow jones would be: ^DJI, and the S&P 500 would be: ^SPX",
+                        },
+                        "description": "List of stock ticker symbols up to 5. Index symbols should be prefixed with '^'"
+                                       " for example, the dow jones: would be ^DJI or the S&P 500 would be ^SPX",
+                    }
+                },
+                required=["tickers"]
+            ),
+
+            self.function_definer(
+                name="get_news",
+                desc="returns truncated data from news articles used to respond to prompts about current events. "
+                     "this should only be called to when GPT needs information about a current event to respond to a"
+                     "prompt, if the user only wants the news articles, then 'send_news' should be used",
+                params={
+                    "topic": {
+                        "type": "string",
+                        "description": "Topic of what you want to see news articles about. If this parameter is not"
+                                       " provided or is set to '', then the articles will be just general news",
+                    },
+                    "n": {
+                        "type": "integer",
+                        "description": "number of news articles that are wanted. This does not need to be provided"
+                                       " and will be 3 be default. This number should be conservative to save tokens",
+                    },
+                    "category": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "Category of news articles to get. "
+                                           "This should be left blank or not provided for 'all categories'"
+                                           "Each element must be one of: 'business', 'crime', 'domestic', 'education',"
+                                           "'entertainment', 'environment', 'food', 'other', 'politics', 'science', "
+                                           "'sports', 'technology', 'top', 'tourism', 'world', 'health' ",
+                        },
+                        "description": "List of news categories **MAX 5**. 'top should usually be provided in this list",
+                    },
+                    # "country": {
+                    #     "type": "array",
+                    #     "items": {
+                    #         "type": "string",
+                    #         "description": "country code. should be one of 'us', 'gb', 'au', 'de', 'jp', 'fr', "
+                    #                        " 'il' 'cn', 'it",
+                    #     },
+                    #     "description": "countries of origin for the news articles **MAX 5**."
+                    #                    "By default, this should usually be 'us', only if news originating "
+                    #                    "from somewhere else is specifically requested should that change. "
+                    #                    "ex: 'what is going on in israel' should be topic='israel' and country=['us'] "
+                    #                    "but 'show me news from japan' should be topic='' and country=['il']"
+                    #                    "Language will always be english for any country provided, "
+                    #                    "so that should not be a consideration",
+                    # }
+                },
+                required=[]
+            ),
+
+            self.function_definer(
+                name="send_news",
+                desc="sends news articles directly to the user in discord",
+                params={
+                    "topic": {
+                        "type": "string",
+                        "description": "same as get_news",
+                    },
+                    "n": {
+                        "type": "integer",
+                        "description": "same as get_news",
+                    },
+                    "category": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "same as get_news",
+                        },
+                        "description": "same as get_news",
+                    },
+                    # "country": {
+                    #     "type": "array",
+                    #     "items": {
+                    #         "type": "string",
+                    #         "description": "ISO 3166 country code",
+                    #     },
+                    #     "description": "same as get_news",
+                    # }
+                },
+                required=[]
+            )
+        ]
+        agent = self.openai.create_agent(
+            instructions="You are an intelligent bot for a discord server responsible answering questions"
+                         " and for determining what functions need to be called to answer them."
+                         " functions that start with 'send' are designed to send formatted information to the user,"
+                         " while functions that start with 'get' are for you to retrieve data that you need."
+                         " If answering a question requires a calculation, do not provide a verbose walkthrough"
+                         " of the calculation steps",
+            name="AVA",
+            tools=tools,
+            model="gpt-4-1106-preview",
+        )
+        print(agent)
 
 
 

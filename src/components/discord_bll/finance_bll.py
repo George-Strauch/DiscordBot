@@ -53,7 +53,7 @@ class FinanceBll:
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
 
-    def get_yearly_financial_statements(self, tickers: list):
+    def get_yearly_financial_statements(self, tickers: list, fields: list = []):
         try:
             data = self.ticker_info.get_financial_data(tickers=tickers)
             print(data)
