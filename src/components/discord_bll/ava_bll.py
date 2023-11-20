@@ -23,7 +23,7 @@ class AvaBll:
         self.news_bll = NewsBll()
         self.misc_bll = MiscBll()
         self.finance_bll = FinanceBll()
-        self.ava_agent = "asst_2LwmMm4H1MZhWUM7DvVa4iS4"
+        self.ava_agent = "asst_dTTu2Wvl8eouRdagRf6Lluun"
         self.function_map = {
             "get_news": self.ava_get_news,
             "send_news": self.ava_send_news,
@@ -76,6 +76,10 @@ class AvaBll:
                         func_call_id = f.id
                         func_name = f.function.name
                         args = json.loads(f.function.arguments)
+                        print(f"Function: {func_name}\nParameters:\n{json.dumps(args)}")
+                        # todo
+                        # if func_name in self.needs_channel_context:
+                        #     args.update({})
                         output = self.function_map[func_name](**args)
                         if func_name in self.display_functions:
                             display_objects.append(output)

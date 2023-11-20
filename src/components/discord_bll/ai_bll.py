@@ -267,6 +267,7 @@ class AIBll:
              'Depreciation And Amortization', 'Depreciation', 'Operating Gains Losses',
              'Net Foreign Currency Exchange Gain Loss', 'Gain Loss On Sale Of PPE',
              'Net Income From Continuing Operations', 'earnings_dates'] + ['dates', 'Ordinary Shares Number', 'Share Issued', 'Net Debt', 'Total Debt', 'Tangible Book Value', 'Invested Capital', 'Working Capital', 'Net Tangible Assets', 'Capital Lease Obligations', 'Common Stock Equity', 'Total Capitalization', 'Total Equity Gross Minority Interest', 'Minority Interest', 'Stockholders Equity', 'Gains Losses Not Affecting Retained Earnings', 'Other Equity Adjustments', 'Retained Earnings', 'Additional Paid In Capital', 'Capital Stock', 'Common Stock', 'Preferred Stock', 'Total Liabilities Net Minority Interest', 'Total Non Current Liabilities Net Minority Interest', 'Other Non Current Liabilities', 'Preferred Securities Outside Stock Equity', 'Non Current Accrued Expenses', 'Non Current Deferred Liabilities', 'Non Current Deferred Revenue', 'Non Current Deferred Taxes Liabilities', 'Long Term Debt And Capital Lease Obligation', 'Long Term Capital Lease Obligation', 'Long Term Debt', 'Long Term Provisions', 'Current Liabilities', 'Other Current Liabilities', 'Current Deferred Liabilities', 'Current Deferred Revenue', 'Current Debt And Capital Lease Obligation', 'Current Capital Lease Obligation', 'Current Debt', 'Other Current Borrowings', 'Current Provisions', 'Payables And Accrued Expenses', 'Current Accrued Expenses', 'Interest Payable', 'Payables', 'Total Tax Payable', 'Accounts Payable', 'Total Assets', 'Total Non Current Assets', 'Other Non Current Assets', 'Non Current Note Receivables', 'Goodwill And Other Intangible Assets', 'Other Intangible Assets', 'Goodwill', 'Net PPE', 'Accumulated Depreciation', 'Gross PPE', 'Leases', 'Construction In Progress', 'Other Properties', 'Machinery Furniture Equipment', 'Land And Improvements', 'Properties', 'Current Assets', 'Other Current Assets', 'Restricted Cash', 'Prepaid Assets', 'Inventory', 'Other Inventories', 'Finished Goods', 'Work In Process', 'Raw Materials', 'Receivables', 'Accounts Receivable', 'Cash Cash Equivalents And Short Term Investments', 'Other Short Term Investments', 'Cash And Cash Equivalents']
+        finance_fields = [f'"{x}"' for x in finance_fields]
         finance_fields = ", ".join(finance_fields)
 
         tools = [
@@ -287,9 +288,11 @@ class AIBll:
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "description": f"field that is required to be provided. most be one of: {finance_fields}"
+                            "description": f"field that is required to be provided."
+                                           f" Must be one of the following options: {finance_fields}"
                         },
-                        "description": "List of stock ticker symbols up to 5",
+                        "description": "List of stock ticker symbols up to 5. "
+                                       "All elements must be from this list provided",
                     }
                 },
                 required=["tickers"]
@@ -400,7 +403,8 @@ class AIBll:
                          " functions that start with 'send' are designed to send formatted information to the user,"
                          " while functions that start with 'get' are for you to retrieve data that you need."
                          " If answering a question requires a calculation, do not verbosely explain a walkthrough"
-                         " of the steps unless asked. only provide the result of the calculation",
+                         " of the steps unless asked. only provide the result of the calculation. Only use markdown "
+                         "for code blocks, do not use fomrattings commands like /frac{}{} or /text",
             name="AVA",
             tools=tools,
             model="gpt-4-1106-preview",

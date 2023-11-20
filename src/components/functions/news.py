@@ -1,6 +1,102 @@
 import json
-from newsdataapi import NewsDataApiClient
-# https://rapidapi.com/newslit/api/newslit-news-search/details # todo
+import requests
+
+
+class News:
+    def __init__(self, apikey=""):
+        # WORLDNEWSAPIKEY
+        self.api_key = apikey
+        self.headers = {}
+        self.url_suffix = f"api-key={self.api_key}"
+        self.base_url = "https://api.worldnewsapi.com/"
+        self.source_map = {
+            "AP": "https://apnews.com",
+            "FOX": "https://www.foxnews.com",
+            "REUTERS": "https://www.reuters.com",
+            "BBC": "https://www.bbc.com",
+            "NPR": "https://www.npr.org",
+            "CNN": "https://www.cnn.com",
+            "SKYNEWS": "https://news.sky.com"
+        }
+
+
+    def encode(self, param):
+        encoding_mappings = {
+            ':': '%3A',
+            ",": "%2C",
+            " ": "%20",
+            "/": "%2f",
+        }
+        for k, v in encoding_mappings.items():
+            param = param.replace(k, v)
+        return param
+
+
+    def source_to_url(self, source):
+        return self.source_map.get(source.upper(), "")
+
+
+    def build_url(self, action, **kwargs):
+        url = f"{self.base_url}{action}?api-key={self.api_key}"
+        for k, v in kwargs.items():
+            param = k.replace('_', '-')
+            value = self.encode(v)
+            url += f"&{param}={value}"
+        return url
+
+
+    def verify_response(self, response: requests.Response):
+        if response.status_code // 100 != 2:
+            print(response.json())
+            print(response.url)
+            return False, {"error": "Non 200 status code from API"}
+        try:
+            data = response.json()
+            news_articles = data["news"]
+            return True, news_articles
+        except Exception as ex:
+            return False, {"error": "Failed to read API response as json"}
+
+
+    def search_news(
+            self,
+            sources: list = None,
+            **kwargs
+    ):
+        """
+        searches news articles
+        """
+        params = {
+            'language': 'en',
+            'source-countries': 'us',
+            'sort': 'publish-time',
+            'sort-direction': 'DESC'
+        }
+
+        if sources:
+            sources = [x.upper() for x in sources]
+            sources = [self.source_to_url(x) for x in sources]
+            sources = [x for x in sources if x != ""]
+            params["news-sources"] = ",".join(sources)
+
+        params.update(kwargs)
+        url = self.build_url(
+            action="search-news",
+            **params
+        )
+        print(url)
+        response = requests.get(url=url)
+        success, data = self.verify_response(response=response)
+        return data
+
+
+
+
+
+
+
+
+
 
 
 class NewsFunctions:
@@ -18,6 +114,7 @@ class NewsFunctions:
             "domain": "npr,bbc,abcnews,nbcnews"
         }
         refine.update(kwargs)
+        print(json.dumps(refine, indent=4))
         # arguments = refine.copy()
         bad = [k for k, v in refine.items() if v==""]
         for b in bad:
@@ -54,13 +151,3 @@ class NewsFunctions:
             return items
 
 
-
-
-if __name__ == '__main__':
-    n = NewsFunctions("pub_32005769a84dc89f492b5cb67b8bc78808ce2")
-    k = {
-        "size": 5,
-        "domain": "foxnews"
-    }
-    x = n.get_news_raw()
-    print(json.dumps(x, indent=4))
