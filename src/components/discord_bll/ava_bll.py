@@ -23,7 +23,7 @@ class AvaBll:
         self.news_bll = NewsBll()
         self.misc_bll = MiscBll()
         self.finance_bll = FinanceBll()
-        self.ava_agent = "asst_dTTu2Wvl8eouRdagRf6Lluun"
+        self.ava_agent = "asst_CTzWE0RvBUgVnXZORJvYG4cT"
         self.function_map = {
             "get_news": self.ava_get_news,
             "send_news": self.ava_send_news,
@@ -72,7 +72,7 @@ class AvaBll:
                     funcs_to_call = tool.submit_tool_outputs.tool_calls
                     tool_outputs = []
                     for f in funcs_to_call:
-                        print(f)
+                        # print(f)
                         func_call_id = f.id
                         func_name = f.function.name
                         args = json.loads(f.function.arguments)
@@ -108,15 +108,20 @@ class AvaBll:
                         messages = self.openai.retrieve_messages(thread_id=thread.id)
                         response = messages.data[0].content[0].text.value
                         print(f"response: {response}")
+                        print(f"len response = {len(response)}")
                         if len(response) > 1996:
                             response = response[:1996]
-                        if '`' not in response:
-                            response = f"```{response}```"
-                        display_objects.append(
-                            {
-                                "content": response
-                            }
-                        )
+                            chunked = chunk_message(response)
+                            print(json.dumps(chunked, indent=4))
+                            print(f"len chunked = {len(chunked)}")
+                            display_objects.extend([display_objects.append({"content": r}) for r in chunked])
+
+                        else:
+                            display_objects.append(
+                                {
+                                    "content": response
+                                }
+                            )
                     else:
                         display_objects.append(
                             {
@@ -155,37 +160,29 @@ class AvaBll:
 
     def ava_send_news(
             self,
-            topic="",
+            text="",
             n=4,
-            source: str = "",
-            category: str = "",
-            country: str = "us",
+            sources: list = None,
             **kwargs
     ):
         response = self.news_bll.get_news(
-            topic=topic,
+            text=text,
             n=n,
-            source=source,
-            category=category,
-            country=country
+            sources=sources
         )
         return response
 
     def ava_get_news(
             self,
-            topic="",
+            text="",
             n=3,
-            source: str = "",
-            category: str = "",
-            country: str = "us",
+            sources: list = None,
             **kwargs
     ):
-        news_articles = self.news_bll.get_full_raw_news(
-            topic=topic,
+        news_articles = self.news_bll.get_news_raw(
+            text=text,
             n=n,
-            source=source,
-            category=category,
-            country=country
+            sources=sources
         )
         if len(news_articles) == 0:
             return {
@@ -194,17 +191,16 @@ class AvaBll:
         news_content = [
             {
                 # "title": x["title"],
-                "content": x["content"].replace(r"\u2014", "-").replace(r"\u2019", "'")
-                if x["content"] is not None else x["description"].replace(r"\u2014", "-").replace(r"\u2019", "'")
+                "text": x["text"]
             }
             for x in news_articles
         ]
 
         refined_news_content = []
         for x in news_content:
-            # todo make sure that is enough characters, perhapse break by space
+            # todo make sure that is enough characters, perhaps break by space
             # words = x["content"].split(" ")
-            refined_news_content.append(x["content"][:2000])
+            refined_news_content.append(x["text"][:2000])
         print(json.dumps(refined_news_content, indent=4))
         refined_news_content = "\n\n".join(refined_news_content)
         print(f"sending gpt:\n{refined_news_content}")

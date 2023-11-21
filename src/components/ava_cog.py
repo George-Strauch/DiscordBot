@@ -28,6 +28,7 @@ class AvaNlp(commands.Cog):
         print(f"prompt is {prompt}")
         await ctx.reply("Working on that...")
         response = self.ava.call_ava(prompt=prompt)
+
         for x in response:
             await ctx.reply(**x)
             await asyncio.sleep(1)

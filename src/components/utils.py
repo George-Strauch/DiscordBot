@@ -53,7 +53,7 @@ def chunk_message(inpt: str) -> list:
     message = ""
     parts = []
     for x in text:
-        if len(message) + len(x) + 1 <2000:
+        if len(message) + len(x) + 1 < 2000:
             message = message+"\n"+x
         else:
             parts.append(message)

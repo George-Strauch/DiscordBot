@@ -3,21 +3,22 @@ import requests
 
 
 class News:
+    source_map = {
+        "AP": "https://apnews.com",
+        "FOX": "https://www.foxnews.com",
+        "REUTERS": "https://www.reuters.com",
+        "BBC": "https://www.bbc.com",
+        "NPR": "https://www.npr.org",
+        "CNN": "https://www.cnn.com",
+        "SKYNEWS": "https://news.sky.com"
+    }
+
     def __init__(self, apikey=""):
         # WORLDNEWSAPIKEY
         self.api_key = apikey
         self.headers = {}
         self.url_suffix = f"api-key={self.api_key}"
         self.base_url = "https://api.worldnewsapi.com/"
-        self.source_map = {
-            "AP": "https://apnews.com",
-            "FOX": "https://www.foxnews.com",
-            "REUTERS": "https://www.reuters.com",
-            "BBC": "https://www.bbc.com",
-            "NPR": "https://www.npr.org",
-            "CNN": "https://www.cnn.com",
-            "SKYNEWS": "https://news.sky.com"
-        }
 
 
     def encode(self, param):
@@ -46,13 +47,14 @@ class News:
 
 
     def verify_response(self, response: requests.Response):
+        print(response.status_code)
         if response.status_code // 100 != 2:
             print(response.json())
             print(response.url)
             return False, {"error": "Non 200 status code from API"}
         try:
             data = response.json()
-            news_articles = data["news"]
+            news_articles = {"articles": data["news"]}
             return True, news_articles
         except Exception as ex:
             return False, {"error": "Failed to read API response as json"}
@@ -70,7 +72,8 @@ class News:
             'language': 'en',
             'source-countries': 'us',
             'sort': 'publish-time',
-            'sort-direction': 'DESC'
+            'sort-direction': 'DESC',
+            'text': 'breaking news'
         }
 
         if sources:
@@ -87,6 +90,7 @@ class News:
         print(url)
         response = requests.get(url=url)
         success, data = self.verify_response(response=response)
+        print(success)
         return data
 
 
@@ -96,58 +100,58 @@ class News:
 
 
 
-
-
-
-class NewsFunctions:
-    def __init__(self, api_key):
-        self.client = NewsDataApiClient(apikey=api_key)
-
-
-    def get_news_raw(self, **kwargs):
-        refine = {
-            "size": 10,
-            "language": "en",
-            "prioritydomain": "top",
-            # "category": "business,politics,science,technology,world",
-            "country": 'us,au,gb',
-            "domain": "npr,bbc,abcnews,nbcnews"
-        }
-        refine.update(kwargs)
-        print(json.dumps(refine, indent=4))
-        # arguments = refine.copy()
-        bad = [k for k, v in refine.items() if v==""]
-        for b in bad:
-            del refine[b]
-        try:
-            results = self.client.news_api(**refine)
-
-            return results
-        except Exception as e:
-            # errors = '\n'.join([f"{k}: {v}" for k, v in e.args.items()])
-            errors = str(e.args)
-            print(f"error {errors}")
-            return {"error": errors}
-
-    def get_news(self, **kwargs):
-        n = self.get_news_raw(**kwargs)
-        if "error" in n.keys():
-            return f"An error occurred getting news: {n['error']}"
-        else:
-            sep = "\u200b\t|\u200b\t"
-            sep = "  |  "
-            items = [
-                {
-                    "Title": x["title"].replace(r"\u2019", "'"),
-                    "Link": x["link"],
-                    "description": x['description'],
-                    "img_url": x["image_url"],
-                    # "footer": f'{x["source_id"]} \t|\t {x["pubDate"]} \t|\t {",".join(x["country"])} \t|\t Source: Newsdata.io'
-                    "footer": f'{x["source_id"]}{sep}{x["pubDate"]}{sep}Source: Newsdata.io'
-
-            }
-                for x in n["results"]
-            ]
-            return items
+#
+#
+#
+# class NewsFunctions:
+#     def __init__(self, api_key):
+#         self.client = NewsDataApiClient(apikey=api_key)
+#
+#
+#     def get_news_raw(self, **kwargs):
+#         refine = {
+#             "size": 10,
+#             "language": "en",
+#             "prioritydomain": "top",
+#             # "category": "business,politics,science,technology,world",
+#             "country": 'us,au,gb',
+#             "domain": "npr,bbc,abcnews,nbcnews"
+#         }
+#         refine.update(kwargs)
+#         print(json.dumps(refine, indent=4))
+#         # arguments = refine.copy()
+#         bad = [k for k, v in refine.items() if v==""]
+#         for b in bad:
+#             del refine[b]
+#         try:
+#             results = self.client.news_api(**refine)
+#
+#             return results
+#         except Exception as e:
+#             # errors = '\n'.join([f"{k}: {v}" for k, v in e.args.items()])
+#             errors = str(e.args)
+#             print(f"error {errors}")
+#             return {"error": errors}
+#
+#     def get_news(self, **kwargs):
+#         n = self.get_news_raw(**kwargs)
+#         if "error" in n.keys():
+#             return f"An error occurred getting news: {n['error']}"
+#         else:
+#             sep = "\u200b\t|\u200b\t"
+#             sep = "  |  "
+#             items = [
+#                 {
+#                     "Title": x["title"].replace(r"\u2019", "'"),
+#                     "Link": x["link"],
+#                     "description": x['description'],
+#                     "img_url": x["image_url"],
+#                     # "footer": f'{x["source_id"]} \t|\t {x["pubDate"]} \t|\t {",".join(x["country"])} \t|\t Source: Newsdata.io'
+#                     "footer": f'{x["source_id"]}{sep}{x["pubDate"]}{sep}Source: Newsdata.io'
+#
+#             }
+#                 for x in n["results"]
+#             ]
+#             return items
 
 

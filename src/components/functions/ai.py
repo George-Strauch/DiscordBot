@@ -157,7 +157,7 @@ class OpenAIwrapper:
             self,
             run_id: str,
             thread_id: str,
-            n: int = 10,
+            n: int = 20,
             dt: int = 5
     ):
         """
@@ -175,11 +175,14 @@ class OpenAIwrapper:
                 run_id=run_id,
                 thread_id=thread_id
             )
+            # print(run)
             if run is None:
                 strike += 1
                 print(f"strike: {strike}")
                 if strike == 3:
                     return None
+                else:
+                    continue
             print(run.status)
             if run.status not in ["queued", "in_progress"]:
                 print(run)
