@@ -28,8 +28,11 @@ class AvaNlp(commands.Cog):
         print(f"prompt is {prompt}")
         await ctx.reply("Working on that...")
         response = self.ava.call_ava(prompt=prompt)
-
-        for x in response:
+        tokens = response["tokens"]
+        print(f"TOTAL TOKENS USED IN CALL: {tokens} | AT A COST OF ${tokens*(0.06/1000):.2f}")
+        display_objects = response["display_content"]
+        for x in display_objects:
+            print(f"sending response: {x}")
             await ctx.reply(**x)
             await asyncio.sleep(1)
 

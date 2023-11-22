@@ -47,19 +47,23 @@ class NewsBll:
             text: str = "",
             n: int = 5,
             sources: list = None,
-    ):
+    ) -> dict:
         kwargs = {}
         if text not in [None, ""]:
             kwargs["text"] = text
         if sources not in [None, "", []]:
             kwargs["sources"] = sources
+        print(f"RAW NEWS KWARGS:\n{json.dumps(kwargs)}")
         news = self.news_api.search_news(
             **kwargs
         )
         if "error" in news:
             msg = f"failed to get news with params: {kwargs}\nmessage: {news['error']}"
             log_events([msg], log_file=self.log_file)
-            return []
+            return {"error": "An API error occurred"}
+        elif len(news["articles"]) == 0:
+            log_events(["no news articles found with query"], log_file=self.log_file)
+            return {"error": "No news articles found with query"}
         else:
             data = news["articles"][:n]
             print(data)
@@ -76,8 +80,8 @@ class NewsBll:
             if data[i]["source"] == "":
                 x = data[i]["url"].split("//")[1]
                 x = data[i]["url"].split("/")[0]
-                data[i]["source"] = x
-        return data
+                data[i]["source"] = x.upper()
+        return {"news": data}
 
 
     def get_news(
@@ -96,15 +100,14 @@ class NewsBll:
             kwargs["sources"] = sources
         log_events(f"Sending News:\n{json.dumps(kwargs, indent=4)}", self.log_file)
         news_response = self.get_news_raw(**kwargs)
-        if len(news_response) == 0:
-            return {"content": "No news articles found with the provided query"}
-        else:
-            print(len(news_response))
-            embeds = [
-                self.create_article_embed(article=x, color=theme_colors[i])
-                for i, x in enumerate(news_response)
-            ]
-            return {"embeds": embeds}
+        if "error" in news_response:
+            return {"content": news_response}
+        news_response = news_response["news"]
+        embeds = [
+            self.create_article_embed(article=x, color=theme_colors[i])
+            for i, x in enumerate(news_response)
+        ]
+        return {"embeds": embeds}
 
 
 
@@ -373,8 +376,8 @@ class NewsBll:
         )
         for x in articles:
             e.add_field(
-                name=f'[{x["title"]({x["url"]})}]',
-                value=x['description'],
+                name=x["title"],
+                value=x['url'],
                 inline=False
             )
         return e

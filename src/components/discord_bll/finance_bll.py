@@ -56,12 +56,12 @@ class FinanceBll:
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
 
-    def get_financial_statements(self, tickers: list, fields: list = []):
+    def get_financial_statements(self, tickers: list, fields: list = None):
         try:
             response = self.ticker_info.get_financial_data(tickers=tickers)
             if not response:
                 return {
-                    "error": "An issue occurred getting ticker data from api"
+                    "errors": "errors occurred when getting information for the provided tickers from API"
                 }
             ret_data = {}
             for ticker in response.tickers.values():
@@ -73,8 +73,9 @@ class FinanceBll:
                         dates = row.keys().values
                         dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                         cash_flow_data["dates"] = dates
-                    if key in fields:
+                    if not fields or key in fields:
                         cash_flow_data[key] = row.to_list()
+
                 if len(cash_flow_data) > 1:
                     ret_data[ticker.ticker]["cashflow"] = cash_flow_data
 
@@ -85,19 +86,19 @@ class FinanceBll:
                         dates = row.keys().values
                         dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                         bs_data["dates"] = dates
-                    if key in fields:
+                    if not fields or key in fields:
                         bs_data[key] = row.to_list()
 
                 if len(bs_data) > 1:
                     ret_data[ticker.ticker]["balance_sheet"] = bs_data
 
-                if "earnings_dates" in fields:
+                if not fields or "earnings_dates" in fields:
                     dates = ticker.earnings_dates.T.keys().values
                     earnings_dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                     ret_data[ticker.ticker]["earnings_dates"] = list(set(earnings_dates))
             return ret_data
         except Exception as ex:
-            return {"Errors": "errors occurred when getting information for the provided tickers"}
+            return {"errors": "errors occurred when getting information for the provided tickers from API"}
 
 
     def _finance_embed(self, ticker_data, t_name):

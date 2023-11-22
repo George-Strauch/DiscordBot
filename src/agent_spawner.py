@@ -1,10 +1,12 @@
+import json
+
 from components.discord_bll.ai_bll import AIBll
+from components.utils import chunk_message
 
 bll = AIBll()
 
 
 def make_ava():
-
     finance_fields = ['dates', 'Free Cash Flow', 'Repayment Of Debt', 'Issuance Of Debt', 'Issuance Of Capital Stock',
                       'Capital Expenditure', 'Interest Paid Supplemental Data', 'Income Tax Paid Supplemental Data',
                       'End Cash Position', 'Beginning Cash Position', 'Effect Of Exchange Rate Changes',
@@ -58,8 +60,6 @@ def make_ava():
                      ]
     finance_fields = [f'"{x}"' for x in finance_fields]
     finance_fields = ", ".join(finance_fields)
-
-
 
     tools = [
         bll.function_definer(
@@ -166,21 +166,40 @@ def make_ava():
         )
     ]
 
-    agent = bll.create_agent(
-        instructions="You are an intelligent bot for a discord server responsible answering questions"
-                     " and for determining what functions need to be called to answer them."
-                     " functions that start with 'send' are designed to send formatted information to the user,"
-                     " while functions that start with 'get' are for you to retrieve data that you need."
-                     " If answering a question requires a calculation, do not verbosely explain a walkthrough"
-                     " of the steps unless asked. only provide the result of the calculation. Only use markdown "
-                     "for code blocks, do not use formatting commands like /frac{}{} or /text",
-        name="AVA",
-        tools=tools,
-        model="gpt-4-1106-preview",
-    )
-    return agent
+    context = [
+        bll.context_definer(
+            role="system",
+            content="You are an intelligent bot for a discord server responsible answering questions"
+                    " and for determining what functions need to be called to answer them."
+                    " functions that start with 'send' are designed to send formatted information to the user,"
+                    " while functions that start with 'get' are for you to retrieve data that you need."
+                    " If answering a question requires a calculation, do not verbosely explain a walkthrough"
+                    " of the steps unless asked. only provide the result of the calculation"
+            )
+        ]
+
+    model = {
+        "tools": tools,
+        "context": context
+    }
+    print(json.dumps(model, indent=4))
+
+    #
+    # agent = bll.create_agent(
+    #     instructions="You are an intelligent bot for a discord server responsible answering questions"
+    #                  " and for determining what functions need to be called to answer them."
+    #                  " functions that start with 'send' are designed to send formatted information to the user,"
+    #                  " while functions that start with 'get' are for you to retrieve data that you need."
+    #                  " If answering a question requires a calculation, do not verbosely explain a walkthrough"
+    #                  " of the steps unless asked. only provide the result of the calculation. Only use markdown "
+    #                  "for code blocks, do not use formatting commands like /frac{}{} or /text",
+    #     name="AVA",
+    #     tools=tools,
+    #     model="gpt-4-1106-preview",
+    # )
+    # return agent
 
 
 if __name__ == '__main__':
-    agent = make_ava()
-    print(agent)
+    make_ava()
+

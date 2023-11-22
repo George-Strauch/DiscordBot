@@ -20,23 +20,42 @@ class OpenAIwrapper:
             model="gpt-4",
             **kwargs
     ):
+        print(f"GPT ARGS:\n{json.dumps({'model': model, 'context':context, **kwargs}, indent=4)}")
         try:
+            tools = []
+            text = ""
             response = self.client.chat.completions.create(
                 model=model,
                 messages=context,
                 **kwargs
             )
-            # print(json.dumps(response, indent=4))
+            print(response)
+            choice = response.choices[0]
+            print(choice)
+            if choice.message.tool_calls:
+                tool_calls = choice.message.tool_calls
+                tools = [
+                    {
+                        'function': x.function.name,
+                        'arguments': json.loads(x.function.arguments),
+                    }
+                    for x in tool_calls
+                ]
+            if choice.message.content:
+                text = choice.message.content
             return {
-                "content": response["choices"][0]["message"]["content"],
-                "input_tokens": response["usage"]["prompt_tokens"],
-                "output_tokens": response["usage"]["completion_tokens"],
-                "total_tokens": response["usage"]["total_tokens"]
+                "text": text,
+                "tool_calls": tools,
+                "input_tokens": response.usage.prompt_tokens,
+                "output_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
             }
         except Exception as ex:
+            import traceback
+            print(traceback.format_exc())
             message = "An error occurred querying OpenAi"
             if len(ex.args) > 0:
-                message = ex.args[0]
+                message += " " + str(ex.args[0])
             return {"error": message}
 
 
@@ -59,46 +78,12 @@ class OpenAIwrapper:
             )
             return {
                 "url": response['data'][0]['url'],
-                # "input_tokens": response["usage"]["prompt_tokens"],
-                # "output_tokens": response["usage"]["completion_tokens"],
-                # "total_tokens": response["usage"]["total_tokens"]
             }
         except Exception as ex:
             message = "An error occurred generating an image with OpenAi"
             if len(ex.args) > 0:
                 message = ex.args[0]
             return {"error": message}
-
-
-    # def function_caller(self, _input, tools, model="gpt-4"):
-    #     # "gpt-3.5-turbo-0613"
-    #     try:
-    #         # model = "gpt-3.5-turbo-1106"
-    #         message = self.context + [{"role": "user", "content": _input}]
-    #         chat = self.client.chat.completions.create(
-    #             model=model,
-    #             messages=message,
-    #             tools=tools
-    #         )
-    #         tokens = chat["usage"]["total_tokens"]
-    #         choice = chat.choices[0]
-    #         print(f"------------------------------- Tokens used: {tokens}")
-    #         if "tool_calls" in choice.message:
-    #             reply = chat.choices[0].message.tool_calls
-    #             func = reply[0]["function"]
-    #             func["arguments"] = json.loads(func["arguments"])
-    #             print("function call \n", json.dumps(func, indent=4))
-    #             return True, func
-    #         else:
-    #             reply = choice.message.content
-    #             print("Text response \n", reply)
-    #
-    #             return False, reply
-    #     except Exception as ire:
-    #         print("issues")
-    #         print(ire.args)
-    #         return False, "OpenAI rejected the prompt"
-
 
     def create_thread(self):
         return self.client.beta.threads.create()

@@ -41,10 +41,7 @@ class News(commands.Cog):
         source = source.value if not isinstance(source, str) else ""
         sources = [] if source in ["x", ""] else source
         if isinstance(sources, str):
-            print(source)
             sources = [sources]
-        print(sources)
-        # todo still getting X in news notifications
         try:
             response = self.news_bll.get_news(
                 text=text,
@@ -52,7 +49,6 @@ class News(commands.Cog):
                 n=n,
             )
             await ctx.reply(**response)
-
         except Exception as e:
             await ctx.reply(content="Something went wrong getting news :[")
             x = str(traceback.format_exc())
