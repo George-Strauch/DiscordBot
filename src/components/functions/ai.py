@@ -29,9 +29,7 @@ class OpenAIwrapper:
                 messages=context,
                 **kwargs
             )
-            print(response)
             choice = response.choices[0]
-            print(choice)
             if choice.message.tool_calls:
                 tool_calls = choice.message.tool_calls
                 tools = [

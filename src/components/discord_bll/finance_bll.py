@@ -1,4 +1,5 @@
 import datetime
+import traceback
 
 import pandas as pd
 import discord
@@ -20,7 +21,8 @@ class FinanceBll:
     def send_ticker_price(
             self,
             tickers: list,
-            period: str = "1mo"
+            period: str = "1mo",
+            return_price=False
     ):
         """
         :param tickers: list of tickers, indexes like dji and spx need to be prefixed with '^' ex: ^dji and ^spx
@@ -29,12 +31,12 @@ class FinanceBll:
         :return: content sent to discord
         """
         ticker_data = self.ticker_info.get_ticker_price_data(tickers, period=period)
-        print(ticker_data)
         if "error" in ticker_data:
             # todo log
-            return {
-                "content": "I am having trouble getting information about those tickers at the moment"
-            }
+            if return_price:
+                return [0 for x in tickers], {"content": "I am having trouble getting information about those tickers at the moment"}
+            else:
+                return {"content": "I am having trouble getting information about those tickers at the moment"}
         else:
             for i, k in enumerate(ticker_data.keys()):
                 ticker_data[k]["color"] = theme_colors[i]
@@ -51,13 +53,18 @@ class FinanceBll:
                     self._finance_embed(x, k)
                     for k, x in ticker_data.items()
                 ]
-                return {
+                display = {
                     "embeds": embeds,
                     "file": discord.File(fp=image_binary, filename='image.png')
                 }
+                if return_price:
+                    print(ticker_data)
+                    return [x['prices'][-1] for x in ticker_data.values()], display
+                return display
 
     def get_financial_statements(self, tickers: list, fields: list = None):
         try:
+            ret_str = ""
             response = self.ticker_info.get_financial_data(tickers=tickers)
             if not response:
                 return {
@@ -68,26 +75,33 @@ class FinanceBll:
                 ret_data[ticker.ticker] = {}
                 cashflow = ticker.quarterly_cashflow
                 cash_flow_data = {"dates": None}
+                ret_str += "CASHFLOW\n"
                 for key, row in cashflow.iterrows():
                     if cash_flow_data["dates"] is None:
                         dates = row.keys().values
                         dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                         cash_flow_data["dates"] = dates
+                        ret_str += "CASH FLOW REPORT DATES: " + ", ".join(dates)+ "\n"
                     if not fields or key in fields:
                         cash_flow_data[key] = row.to_list()
+                        ret_str += f"{key}: " + ", ".join([str(x) for x in row.to_list()]) + "\n"
 
                 if len(cash_flow_data) > 1:
                     ret_data[ticker.ticker]["cashflow"] = cash_flow_data
 
                 bs = ticker.quarterly_balance_sheet
                 bs_data = {"dates": None}
+                ret_str += "\n\nBALANCE SHEET\n"
                 for key, row in bs.iterrows():
                     if bs_data["dates"] is None:
                         dates = row.keys().values
                         dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                         bs_data["dates"] = dates
+                        ret_str += "BALANCE SHEET REPORT DATES: " + ", ".join(dates) + "\n"
+
                     if not fields or key in fields:
                         bs_data[key] = row.to_list()
+                        ret_str += f"{key}: " + ", ".join([str(x) for x in row.to_list()]) + "\n"
 
                 if len(bs_data) > 1:
                     ret_data[ticker.ticker]["balance_sheet"] = bs_data
@@ -96,8 +110,12 @@ class FinanceBll:
                     dates = ticker.earnings_dates.T.keys().values
                     earnings_dates = [pd.to_datetime(str(x)).strftime('%Y-%m-%d') for x in dates]
                     ret_data[ticker.ticker]["earnings_dates"] = list(set(earnings_dates))
-            return ret_data
+                    ret_str += "\n\nALL KNOWN EARNINGS DATES: " + ", ".join(list(set(earnings_dates)))
+            # return ret_data
+            return ret_str
+
         except Exception as ex:
+            print(traceback.format_exc())
             return {"errors": "errors occurred when getting information for the provided tickers from API"}
 
 

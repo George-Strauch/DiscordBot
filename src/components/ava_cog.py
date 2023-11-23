@@ -1,4 +1,6 @@
 import asyncio
+import json
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -35,4 +37,6 @@ class AvaNlp(commands.Cog):
             print(f"sending response: {x}")
             await ctx.reply(**x)
             await asyncio.sleep(1)
+        del response["display_content"]
+        print(json.dumps(response, indent=4))
 

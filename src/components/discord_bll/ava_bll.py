@@ -54,7 +54,7 @@ class AvaBll:
         :param prompt:
         :return:
         """
-        prompt_context = self.ai_bll.context_definer(content=prompt)
+        prompt_context = self.ai_bll.context_definer(content=prompt, role="user")
         context = self.gpt_schema["context"] + [prompt_context]
         tools = self.gpt_schema["tools"]
         display_objects = []
@@ -67,7 +67,6 @@ class AvaBll:
             # "model": "gpt-4-1106-preview",
             # "model": "gpt-4",
             "model": "gpt-3.5-turbo-1106"
-
         }
         try:
             response = self.openai.gpt_response(
@@ -76,7 +75,8 @@ class AvaBll:
                 **gpt_tune_params
             )
             if "total_tokens" in response:
-                token_sum += response["total_tokens"]*0.3
+                print(response["total_tokens"])
+                token_sum += response["total_tokens"]
             if "error" in response:
                 return {
                     "content": response["error"],
@@ -91,7 +91,9 @@ class AvaBll:
                         }
                     )
             needs_second_call = False
+            second_response_model = "gpt-4-1106-preview"
             if response["tool_calls"]:
+                print(f"TOOL CALLS:\n{json.dumps(response['tool_calls'], indent=4)}")
                 new_context = []
                 for tc in response["tool_calls"]:
                     func_name = tc["function"]
@@ -100,17 +102,31 @@ class AvaBll:
                         # todo
                         args.update({})
                     response = self.function_map[func_name](**args)
+                    if "error" in response:
+                        new_context.append(
+                            self.ai_bll.context_definer(
+                                role="system",
+                                content="A tool call made by a previous gpt query failed to perform an action or "
+                                        f"retrieve information relevant to the prompt provided. "
+                                        f"Function name: '{func_name}'."
+                                        f"Ignore that portion of the user prompt and answer what is remaining with "
+                                        f"provided information"
+                            )
+                        )
                     if "display" in response:
                         display_objects.append(response["display"])
+
                     if "context" in response:
-                        # then this is a function that returns a context object ment for gpt
-                        needs_second_call = True
                         new_context.append(response["context"])
+
+                    if "preferred_model" in response:
+                        second_response_model = response["preferred_model"]
+                    needs_second_call = needs_second_call or response.get("requires_followup", False)
                 if needs_second_call:
                     gpt_tune_params.update(
                         {
                             # "model": "gpt-3.5-turbo-1106"
-                            "model": "gpt-4-1106-preview",
+                            "model": second_response_model,
                             "max_tokens": 1500
                             # "model": "gpt-4",
                         }
@@ -127,7 +143,7 @@ class AvaBll:
                     if "total_tokens" in response:
                         token_sum += response["total_tokens"]
                     if response["text"] != "":
-                        print(f"IN SECOND, RESPONSE TEXT: {response['text']}")
+                        # print(f"IN SECOND, RESPONSE TEXT: {response['text']}")
                         for cm in chunk_message(response["text"]):
                             display_objects.append(
                                 {
@@ -148,16 +164,14 @@ class AvaBll:
                 "display_content": display_objects,
                 "tokens": token_sum
             }
-            print("----------------")
-            print(final_response)
-            print("----------------")
+            # print("----------------")
+            # print(final_response)
+            # print("----------------")
             return final_response
         except Exception as ex:
             # todo remove args from response
             import traceback
             print(traceback.format_exc())
-            print("error")
-            print(ex.args)
             display_objects.append(
                 {
                     "content": f"An issue occurred calling Ava: {ex.args}"
@@ -167,20 +181,27 @@ class AvaBll:
                 "display_content": display_objects,
                 "tokens": 0
             }
-            print("----------------")
-            print(final_response)
-            print("----------------")
+            # print("----------------")
+            # print(final_response)
+            # print("----------------")
             return final_response
 
 
     def ava_send_ticker_price(self, tickers, **kwargs):
+        prices, display_data = self.finance_bll.send_ticker_price(
+            tickers=tickers,
+            return_price=True,
+            *kwargs
+        )
+        ticker_string = ", ".join([f"{t}" for t in tickers]) + ": " + ", ".join([f"${t:.2f}" for t in prices])
         return {
-            "display": self.finance_bll.send_ticker_price(
-                tickers=tickers,
-                **kwargs
-            )
+            "display": display_data,
+            "context": self.ai_bll.context_definer(
+                role="system",
+                content=f"most recent stock price(s) for {ticker_string} "
+            ),
+            "requires_followup": False
         }
-
 
     def ava_get_financial_info(self, tickers, **kwargs):
         fin_info = self.finance_bll.get_financial_statements(
@@ -192,7 +213,9 @@ class AvaBll:
             "context": self.ai_bll.context_definer(
                 role="system",
                 content=f"This is financial info that may be relevant to answering the user prompt:\n{json.dumps(fin_info)}"
-            )
+            ),
+            "requires_followup": True,
+            "preferred_model": "gpt-3.5-turbo-1106"
         }
 
 
@@ -212,8 +235,16 @@ class AvaBll:
             n=n,
             sources=sources
         )
+        context_text = f"relating to {text}" if text else ""
         return {
-            "display": response
+            "display": response,
+            "context": self.ai_bll.context_definer(
+                role="system",
+                content=f"news information {context_text} has already been sent to the user by another gpt"
+                        f" query tool_call for this prompt and does not need to be addressed in this followup"
+            ),
+            "requires_followup": True
+
         }
 
     def ava_get_news(
@@ -249,15 +280,14 @@ class AvaBll:
                 words = x["text"].split(" ")
                 words = words[:n_words]
                 words = " ".join(words)
-                print(f"WORDS: {words}")
                 processed_news_content.append(words)
-
             processed_news_content = "\n\n".join(processed_news_content)
             processed_news_content = f"These are news articles that may be relevant to the prompt:\n\n{processed_news_content}"
         print(f"sending gpt:\n{processed_news_content}")
         return {
             "context": self.ai_bll.context_definer(role="system", content=processed_news_content),
-            "display": {"embed": self.news_bll.create_brief_article_embed(articles=news_articles, title="Articles used by gpt")}
+            "display": {"embed": self.news_bll.create_brief_article_embed(articles=news_articles, title="Articles used by gpt")},
+            "requires_followup": True
         }
 
 

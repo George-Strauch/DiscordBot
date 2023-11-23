@@ -250,100 +250,100 @@ class NewsBll:
             }
 
 
-    # async def _news_notification(
-    #         self,
-    #         channel,
-    #         hours=24,
-    #         started="",
-    #         empty_update=False,
-    #         quiet_start=False,
-    #         task=None,
-    #         loop_id=None,
-    #         **kwargs
-    # ):
-    #     """
-    #     this method is the task object definition for each news notification runner
-    #     Sends news notifications in a provided time interval
-    #     """
-    #     # print(f"args: {kwargs}")
-    #     # print("loop iteration: ", task.current_loop)
-    #     # print(f"next occurring at {task.next_iteration}")
-    #     if quiet_start and task:
-    #         if task.current_loop == 0:
-    #
-    #             # loop_data = self.task_manager.news_notifications[channel.guild.id][loop_id]
-    #             t = started.split(": ")[1].split(":")
-    #             now = dt.now()
-    #             start = dt(
-    #                 year=now.year,
-    #                 month=now.month,
-    #                 day=now.day,
-    #                 hour=int(t[0]),
-    #                 minute=int(t[1]),
-    #                 second=0
-    #             )
-    #             start = start - tdelta(days=1)
-    #             while now > start:
-    #                 start = start + tdelta(hours=hours)
-    #             seconds = start - now
-    #             seconds = seconds.seconds
-    #             print(f"waiting {seconds} seconds to start tasks at {start}")
-    #             await asyncio.sleep(seconds)
-    #             # todo, make sure this resets the thing
-    #             task.restart(
-    #                 channel=channel,
-    #                 empty_update=empty_update,
-    #                 task=task,
-    #                 quiet_start=False,
-    #                 loop_id=loop_id,
-    #                 **kwargs
-    #             )
-    #             return
-    #
-    #             # return
-    #     log_events("news task sending news sending news", self.log_file)
-    #     news_articles = self.news_api.get_news(**kwargs)
-    #     if len(news_articles) == 0:
-    #         if empty_update or (task and task.current_loop == 0):
-    #             await channel.send(content="No news articles found with the provided query")
-    #     else:
-    #         embeds = [
-    #             self.create_article_embed(article=x, color=theme_colors[i])
-    #             for i, x in enumerate(news_articles)
-    #         ]
-    #         await channel.send(embeds=embeds)
+    async def _news_notification(
+            self,
+            channel,
+            hours=24,
+            started="",
+            empty_update=False,
+            quiet_start=False,
+            task=None,
+            loop_id=None,
+            **kwargs
+    ):
+        """
+        this method is the task object definition for each news notification runner
+        Sends news notifications in a provided time interval
+        """
+        # print(f"args: {kwargs}")
+        # print("loop iteration: ", task.current_loop)
+        # print(f"next occurring at {task.next_iteration}")
+        if quiet_start and task:
+            if task.current_loop == 0:
+
+                # loop_data = self.task_manager.news_notifications[channel.guild.id][loop_id]
+                t = started.split(": ")[1].split(":")
+                now = dt.now()
+                start = dt(
+                    year=now.year,
+                    month=now.month,
+                    day=now.day,
+                    hour=int(t[0]),
+                    minute=int(t[1]),
+                    second=0
+                )
+                start = start - tdelta(days=1)
+                while now > start:
+                    start = start + tdelta(hours=hours)
+                seconds = start - now
+                seconds = seconds.seconds
+                print(f"waiting {seconds} seconds to start tasks at {start}")
+                await asyncio.sleep(seconds)
+                # todo, make sure this resets the thing
+                task.restart(
+                    channel=channel,
+                    empty_update=empty_update,
+                    task=task,
+                    quiet_start=False,
+                    loop_id=loop_id,
+                    **kwargs
+                )
+                return
+
+                # return
+        log_events("news task sending news sending news", self.log_file)
+        news_articles = self.news_api.get_news(**kwargs)
+        if len(news_articles) == 0:
+            if empty_update or (task and task.current_loop == 0):
+                await channel.send(content="No news articles found with the provided query")
+        else:
+            embeds = [
+                self.create_article_embed(article=x, color=theme_colors[i])
+                for i, x in enumerate(news_articles)
+            ]
+            await channel.send(embeds=embeds)
 
 
-    # def _create_news_notification_loop_embed(self, guild_id, _id, color):
-    #     if _id not in self.task_manager.news_notifications[guild_id]:
-    #         return None
-    #     x = self.task_manager.news_notifications[guild_id][_id]
-    #
-    #     # todo: create a field map for human friendly filed names
-    #     desc = {
-    #         k: v
-    #         for k, v in x["news_params"].items() if k != 'channel'
-    #     }
-    #     desc.update({
-    #         k: v
-    #         for k, v in x["run_params"].items()
-    #     })
-    #     desc["started"] = x['started']
-    #     desc["channel"] = x['news_params']['channel'].name
-    #
-    #     e = discord.Embed(
-    #         title=f"id:\t{_id}",
-    #         color=int(color.replace("#", ""), base=16)
-    #     )
-    #
-    #     for i, (k, v) in enumerate(desc.items()):
-    #         e.insert_field_at(
-    #             index=i,
-    #             name=k,
-    #             value=f"```{v}```",
-    #             inline=len(str(v)) < 14
-    #         )
-    #     return e
+    def _create_news_notification_loop_embed(self, guild_id, _id, color):
+        if _id not in self.task_manager.news_notifications[guild_id]:
+            return None
+        x = self.task_manager.news_notifications[guild_id][_id]
+
+        # todo: create a field map for human friendly filed names
+        desc = {
+            k: v
+            for k, v in x["news_params"].items() if k != 'channel'
+        }
+        desc.update({
+            k: v
+            for k, v in x["run_params"].items()
+        })
+        desc["started"] = x['started']
+        desc["channel"] = x['news_params']['channel'].name
+
+        e = discord.Embed(
+            title=f"id:\t{_id}",
+            color=int(color.replace("#", ""), base=16)
+        )
+
+        for i, (k, v) in enumerate(desc.items()):
+            e.insert_field_at(
+                index=i,
+                name=k,
+                value=f"```{v}```",
+                inline=len(str(v)) < 14
+            )
+        return e
 
 
     def create_article_embed(self, article: dict, color=theme_colors[0]):
@@ -404,3 +404,6 @@ class NewsBll:
             )
             tasks_for_guild[k]["task"] = new_task
         self.task_manager.news_notifications[guild.id] = tasks_for_guild
+
+
+if __name__ == '__main__':
