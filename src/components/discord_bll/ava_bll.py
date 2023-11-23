@@ -215,7 +215,7 @@ class AvaBll:
                 content=f"This is financial info that may be relevant to answering the user prompt:\n{json.dumps(fin_info)}"
             ),
             "requires_followup": True,
-            "preferred_model": "gpt-3.5-turbo-1106"
+            # "preferred_model": "gpt-3.5-turbo-1106"
         }
 
 

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import traceback
 
 from openai import OpenAI
 
@@ -75,9 +76,10 @@ class OpenAIwrapper:
                 **arguments
             )
             return {
-                "url": response['data'][0]['url'],
+                "url": response.data[0].url,
             }
         except Exception as ex:
+            print(traceback.format_exc())
             message = "An error occurred generating an image with OpenAi"
             if len(ex.args) > 0:
                 message = ex.args[0]

@@ -405,5 +405,5 @@ class NewsBll:
             tasks_for_guild[k]["task"] = new_task
         self.task_manager.news_notifications[guild.id] = tasks_for_guild
 
-
-if __name__ == '__main__':
+#
+# if __name__ == '__main__':

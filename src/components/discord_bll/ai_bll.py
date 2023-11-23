@@ -10,7 +10,7 @@ class AIBll:
         cred_file = "/opt/bot/data/creds.json"
         self.openai = OpenAIwrapper(read_file(cred_file)["OPENAI_TOKEN"])
         self.log_file = "/opt/bot/data/ai.log"
-        self.gpt_schema = read_file("../../gpt.json")
+        self.gpt_schema = read_file("gpt.json")
 
 
     @staticmethod
@@ -60,7 +60,7 @@ class AIBll:
         :return: dict {"content": "", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         """
         try:
-            context = self.context + additional_context+[self.context_definer(prompt, "user")]
+            context = additional_context+[self.context_definer(prompt, "user")]
             response = self.openai.gpt_response(
                 context=context,
                 model=model,
